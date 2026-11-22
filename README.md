@@ -47,6 +47,8 @@ User caches and logs start unchecked: pick what you want to delete. Developer ca
 
 **Find large files.** A third tab lists files of 100 MB, 500 MB, 1 GB or 5 GB and more anywhere in your home folder, with the date each was last opened (from Spotlight; otherwise the date it was modified). Nothing is selected by default. Files you select are moved to the Trash, never deleted. The scan skips `~/Library`, the Trash, `~/Applications`, apps and media libraries, Git folders and other volumes.
 
+**Remove Neural DSP plugins.** Neural DSP ships no uninstaller: each plugin is spread over the AU, VST, VST3 and AAX folders, the standalone app in `/Applications/Neural DSP`, presets, a manual, your settings and seven installer receipts. The **Plugins** tab finds them all, groups them by plugin and shows what removed plugins left behind (for example a manual and settings without the plugin). Bundles in the shared plug-in folders count only when their bundle ID is Neural DSP's, so other vendors' plugins never show up. Nothing is selected by default; checking a plugin selects all its parts except presets that hold your own presets (the `User` folder). Parts you can remove yourself (settings, often the manual) go to the Trash. Plugin bundles, the app and other root-owned parts are deleted permanently after one macOS administrator password prompt, which also removes the matching installer receipts. Cancelling the prompt removes nothing.
+
 Right-click any item for **Show in Finder** or **Copy Path**. When something can't be removed, the report says why and what to do next.
 
 Sizes are allocated sizes on disk. Because of APFS clones and local Time Machine snapshots, the space actually freed can be smaller. The Junk tab and the report after a cleanup that deletes files show how many local snapshots the disk has and how old the oldest one is; macOS removes them on its own within 24 hours or when space runs low. DiskSift does not delete snapshots, since that needs administrator rights.
@@ -58,7 +60,7 @@ Sizes are allocated sizes on disk. Because of APFS clones and local Time Machine
 - Paths are resolved before the check, so a symlink can't lead it outside those folders. Symlinks are removed as links; their targets are never touched.
 - If the app itself can't be moved to the Trash, its leftovers are left alone.
 - Apple's own apps and anything under `/System` can't be uninstalled.
-- Items owned by root (for example in `/Library/LaunchDaemons`) are shown but never removed. Apps installed as root are refused up front.
+- Items owned by root (for example in `/Library/LaunchDaemons`) are shown but never removed. Apps installed as root are refused up front. The one exception is the Plugins tab: root-owned parts of a Neural DSP plugin are removed after you enter an administrator password in the macOS prompt. DiskSift checks every path again just before that (a real folder directly inside its Neural DSP or plug-in folder, named after the plugin, with a Neural DSP bundle ID). The paths are passed to the command as quoted arguments, and the command first switches into the parent folder and confirms it is the expected one.
 - If the app you drop is running, DiskSift asks to quit it first.
 
 ## Requirements
@@ -93,7 +95,7 @@ or try to open the app once, then click **Open Anyway** in System Settings → P
 
 ## Not included
 
-Emptying the Trash, removing language files from apps (it breaks their code signature), removing root-owned items, a background agent that watches for deleted apps, and an App Store version (the App Store sandbox doesn't allow reading other apps' data).
+Emptying the Trash, removing language files from apps (it breaks their code signature), removing root-owned items other than Neural DSP plugin parts, plugins of other vendors, a background agent that watches for deleted apps, and an App Store version (the App Store sandbox doesn't allow reading other apps' data).
 
 ## Tech
 

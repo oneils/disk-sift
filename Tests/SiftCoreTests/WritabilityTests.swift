@@ -53,3 +53,43 @@ import Testing
         }
     }
 }
+
+@Suite struct DeepWritabilityTests {
+    @Test func userTreeCanBeTrashed() throws {
+        let fx = try Fixture()
+        try fx.write("p/a/b/c.txt", "x")
+        try fx.write("p/top.txt", "x")
+        #expect(Writability.canTrashDeep(fx.url("p")))
+    }
+
+    @Test func plainFileUsesTheShallowRule() throws {
+        let fx = try Fixture()
+        let file = try fx.write("d/f.txt", "x")
+        #expect(Writability.canTrashDeep(file))
+        try fx.chmod("d", 0o555)
+        #expect(!Writability.canTrashDeep(file))
+    }
+
+    @Test func readOnlySubfolderInsideAWritableFolderFails() throws {
+        let fx = try Fixture()
+        try fx.write("presets/Artists/a.xml", "x")
+        try fx.chmod("presets", 0o777)
+        try fx.chmod("presets/Artists", 0o555)
+        #expect(Writability.canRemove(fx.url("presets"), policy: .trash))
+        #expect(!Writability.canTrashDeep(fx.url("presets")))
+    }
+
+    @Test func symlinksInsideAreNotFollowed() throws {
+        let fx = try Fixture()
+        try fx.write("tmp/locked/x", "x")
+        try fx.chmod("tmp/locked", 0o555)
+        try fx.mkdir("p")
+        try fx.symlink("p/link", to: fx.url("tmp/locked").path)
+        #expect(Writability.canTrashDeep(fx.url("p")))
+    }
+
+    @Test func missingItemFails() throws {
+        let fx = try Fixture()
+        #expect(!Writability.canTrashDeep(fx.url("nope")))
+    }
+}

@@ -6,9 +6,11 @@ enum ReportContext: Equatable {
     case cleanup
     case largeFiles
     case leftovers
+    /// Neural DSP plugins: root-owned parts deleted, the rest moved to the Trash.
+    case plugins
 
     /// How items of this action are removed (amount and note lines follow it).
-    var policy: RemovalPolicy { self == .cleanup ? .delete : .trash }
+    var policy: RemovalPolicy { self == .cleanup || self == .plugins ? .delete : .trash }
 }
 
 /// How a removal ended, for the report headline and symbol.
@@ -55,6 +57,10 @@ enum ReportOutcome: Equatable {
         case (.partial, .leftovers): "Some leftovers moved to Trash"
         case (.stopped, .leftovers): "Moving leftovers to Trash stopped"
         case (.failed, .leftovers): "Leftovers were not moved to Trash"
+        case (.success, .plugins): "Plugins removed"
+        case (.partial, .plugins): "Plugins partly removed"
+        case (.stopped, .plugins): "Removing plugins stopped"
+        case (.failed, .plugins): "Plugins were not removed"
         }
     }
 
@@ -80,6 +86,7 @@ extension SkipReason {
         case .appNotRemoved: "Left alone because the app could not be removed"
         case .notAFile: "Not a regular file"
         case .policyNotAllowed: "Permanent deletion is not allowed here"
+        case .adminStepFailed: "Removing with administrator rights failed"
         }
     }
 
@@ -94,6 +101,7 @@ extension SkipReason {
         case .appNotRemoved: "Fix the problem with the application above, then uninstall again."
         case .notAFile: "Only files can be moved to the Trash from this list; use Finder for folders and links."
         case .policyNotAllowed: "Items from this list can only be moved to the Trash."
+        case .adminStepFailed: "Nothing was moved to the Trash. Check the administrator password and try again."
         }
     }
 }

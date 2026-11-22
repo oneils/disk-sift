@@ -6,6 +6,7 @@ enum Section: String, CaseIterable, Identifiable {
     case uninstall = "Uninstall"
     case junk = "Junk"
     case largeFiles = "Large Files"
+    case plugins = "Plugins"
 
     var id: String { rawValue }
     var icon: String {
@@ -13,6 +14,7 @@ enum Section: String, CaseIterable, Identifiable {
         case .uninstall: "trash"
         case .junk: "sparkles"
         case .largeFiles: "doc.text.magnifyingglass"
+        case .plugins: "pianokeys"
         }
     }
 }
@@ -28,11 +30,13 @@ final class ShellModel {
     let junk: JunkModel
     let largeFiles: LargeFilesModel
     let orphans: OrphansModel
+    let plugins: PluginsModel
 
     init(
         uninstall: UninstallModel = .live(), junk: JunkModel = .live(), largeFiles: LargeFilesModel = .live(),
-        orphans: OrphansModel = .live()
+        orphans: OrphansModel = .live(), plugins: PluginsModel = .live()
     ) {
+        self.plugins = plugins
         self.uninstall = uninstall
         self.junk = junk
         self.largeFiles = largeFiles
@@ -67,6 +71,8 @@ struct ContentView: View {
                     JunkView(model: model.junk)
                 case .largeFiles:
                     LargeFilesView(model: model.largeFiles)
+                case .plugins:
+                    PluginsView(model: model.plugins)
                 }
             }
             .navigationTitle(LocalizedStringKey((model.selection ?? .uninstall).rawValue))
