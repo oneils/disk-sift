@@ -8,6 +8,8 @@ enum ReportContext: Equatable {
     case leftovers
     /// Neural DSP plugins: root-owned parts deleted, the rest moved to the Trash.
     case plugins
+    /// Space Lens: files and folders moved to the Trash.
+    case spaceLens
 
     /// How items of this action are removed (amount and note lines follow it).
     var policy: RemovalPolicy { self == .cleanup || self == .plugins ? .delete : .trash }
@@ -61,6 +63,10 @@ enum ReportOutcome: Equatable {
         case (.partial, .plugins): "Plugins partly removed"
         case (.stopped, .plugins): "Removing plugins stopped"
         case (.failed, .plugins): "Plugins were not removed"
+        case (.success, .spaceLens): "Items moved to Trash"
+        case (.partial, .spaceLens): "Some items moved to Trash"
+        case (.stopped, .spaceLens): "Moving items to Trash stopped"
+        case (.failed, .spaceLens): "Items were not moved to Trash"
         }
     }
 

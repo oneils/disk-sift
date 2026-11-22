@@ -69,6 +69,8 @@ import Testing
         #expect(ReportContext.leftovers.policy == .trash)
         #expect(ReportContext.cleanup.policy == .delete)
         #expect(ReportContext.plugins.policy == .delete)
+        #expect(ReportContext.spaceLens.policy == .trash)
+        #expect(ReportOutcome.success.titleKey(context: .spaceLens) == "Items moved to Trash")
         #expect(ReportOutcome.success.titleKey(context: .plugins) == "Plugins removed")
         #expect(ReportOutcome.failed.titleKey(context: .plugins) == "Plugins were not removed")
         #expect(SkipReason.adminStepFailed.titleKey == "Removing with administrator rights failed")
