@@ -26,6 +26,8 @@ public enum FindingSource: Hashable, Sendable {
     case launchItem(label: String, domain: LaunchDomain)
     case pkgReceipt
     case junk(categoryID: String)
+    /// A file from the Large Files report.
+    case largeFile
 }
 
 /// The concrete match behind a finding, so the UI can explain it instead of showing a bare confidence.
@@ -105,6 +107,10 @@ public enum SkipReason: Equatable, Sendable {
     case vanished
     /// The app itself couldn't be trashed, so its leftovers were left alone.
     case appNotRemoved
+    /// The removal scope only accepts regular files (directories and symlinks are refused).
+    case notAFile
+    /// The removal scope doesn't allow this policy (permanent deletion in a Trash-only scope).
+    case policyNotAllowed
 }
 
 public struct RemovedItem: Equatable, Sendable {

@@ -27,6 +27,7 @@ Sizes are allocated sizes on disk. Because of APFS clones and local Time Machine
 ## Safety
 
 - DiskSift only removes items inside a fixed list of folders: the Library folders it scans, `/Applications`, `~/Applications` and known developer cache folders, never those folders themselves. Anything else, such as iCloud Drive, cloud storage, Mail or Keychains, is refused, whatever the UI asks for.
+- Large files in your home folder go through a separate, stricter scope. DiskSift only moves them to the Trash, never deletes them permanently, and only individual files, never folders or symlinks. It never touches `~/Library`, `~/.Trash`, `~/Applications`, anything inside a package (apps, Photos and Music libraries, Final Cut and Logic projects, virtual machines, sparse bundles) or a `.git` folder, or anything on another volume mounted inside your home folder (external disks, disk images, network shares).
 - Paths are resolved before the check, so a symlink can't lead it outside those folders. Symlinks are removed as links; their targets are never touched.
 - If the app itself can't be moved to the Trash, its leftovers are left alone.
 - Apple's own apps and anything under `/System` can't be uninstalled.

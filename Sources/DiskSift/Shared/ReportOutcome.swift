@@ -58,18 +58,22 @@ extension SkipReason {
         case .inUse: "In use"
         case .vanished: "Already gone"
         case .appNotRemoved: "Left alone because the app could not be removed"
+        case .notAFile: "Not a regular file"
+        case .policyNotAllowed: "Permanent deletion is not allowed here"
         }
     }
 
     /// English localization key of a suggested next step; nil when there is nothing to do.
     var hintKey: String? {
         switch self {
-        case .outsideRoots: "DiskSift only removes items inside known Library locations."
+        case .outsideRoots: "DiskSift only removes items in locations it allows for this action."
         case .needsAdmin: "Remove it in Finder with an administrator account if you no longer need it."
         case .permissionDenied: "Grant Full Disk Access in System Settings, then try again."
         case .inUse: "Quit the app that uses it, then try again."
         case .vanished: nil
         case .appNotRemoved: "Fix the problem with the application above, then uninstall again."
+        case .notAFile: "Only files can be moved to the Trash from this list; use Finder for folders and links."
+        case .policyNotAllowed: "Items from this list can only be moved to the Trash."
         }
     }
 }

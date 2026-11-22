@@ -294,3 +294,90 @@ final class FakeTrasher: Trasher, @unchecked Sendable {
     }
 
 }
+
+@Suite struct LargeFilesRemoverTests {
+    private func finding(_ url: URL) -> Finding {
+        Finding(url: url, size: 1, confidence: .high, sources: [.largeFile])
+    }
+
+    /// Built exactly as the app does: no flags beyond the scope.
+    private func remover(_ fx: Fixture, _ trasher: FakeTrasher) -> Remover {
+        Remover(roots: .largeFiles(fx.paths), trasher: trasher)
+    }
+
+    @Test func regularFileInHomeIsTrashed() throws {
+        let fx = try Fixture()
+        let file = try fx.write("home/Downloads/movie.mkv", "x")
+        let trasher = FakeTrasher()
+        let report = remover(fx, trasher).remove([finding(file)], policy: .trash)
+        #expect(report.removed.map(\.url) == [file])
+        #expect(trasher.trashed.map(\.path) == [file.path])
+    }
+
+    @Test func directoryRefused() throws {
+        let fx = try Fixture()
+        let dir = try fx.mkdir("home/Documents/Project")
+        try fx.write("home/Documents/Project/a.txt")
+        let trasher = FakeTrasher()
+        let report = remover(fx, trasher).remove([finding(dir)], policy: .trash)
+        #expect(report.skipped == [SkippedItem(url: dir, reason: .notAFile)])
+        #expect(trasher.trashed.isEmpty)
+        #expect(FileManager.default.fileExists(atPath: dir.path))
+    }
+
+    @Test func deniedPathsRefused() throws {
+        let fx = try Fixture()
+        let inLibrary = try fx.write("home/Library/Caches/big.bin")
+        let inApp = try fx.write("home/Desktop/X.app/Contents/Resources/big.bin")
+        let inGit = try fx.write("home/code/r/.git/objects/p.pack")
+        let trasher = FakeTrasher()
+        let report = remover(fx, trasher).remove([inLibrary, inApp, inGit].map(finding), policy: .trash)
+        #expect(report.skipped.map(\.reason) == [.outsideRoots, .outsideRoots, .outsideRoots])
+        #expect(trasher.trashed.isEmpty)
+    }
+
+    @Test func permanentDeletionRefusedForEverything() throws {
+        let fx = try Fixture()
+        let file = try fx.write("home/Downloads/a.bin", "x")
+        let trasher = FakeTrasher()
+        let r = remover(fx, trasher)
+        let report = r.remove([finding(file)], policy: .delete)
+        #expect(report.skipped == [SkippedItem(url: file, reason: .policyNotAllowed)])
+        #expect(report.removed.isEmpty)
+        #expect(FileManager.default.fileExists(atPath: file.path))
+    }
+
+    @Test func permanentDeletionRefusedAsync() async throws {
+        let fx = try Fixture()
+        let file = try fx.write("home/Downloads/a.bin", "x")
+        let report = await remover(fx, FakeTrasher()).remove([finding(file)], policy: .delete, onProgress: nil)
+        #expect(report.skipped.map(\.reason) == [.policyNotAllowed])
+        #expect(FileManager.default.fileExists(atPath: file.path))
+    }
+
+    @Test func symlinkRefusedAndTargetUntouched() throws {
+        let fx = try Fixture()
+        let target = try fx.write("tmp/outside.bin", "keep")
+        let link = try fx.symlink("home/Downloads/link.bin", to: target.path)
+        let trasher = FakeTrasher()
+        let report = remover(fx, trasher).remove([finding(link)], policy: .trash)
+        #expect(report.skipped == [SkippedItem(url: link, reason: .notAFile)])
+        #expect(trasher.trashed.isEmpty)
+        #expect(FileManager.default.fileExists(atPath: target.path))
+    }
+
+    /// Documented on purpose: a hard link is a regular file in the allowed folder; trashing it removes
+    /// only that name, the file under ~/Library keeps its other link.
+    @Test func hardLinkToLibraryFileTrashesOnlyTheLink() throws {
+        let fx = try Fixture()
+        let original = try fx.write("home/Library/Application Support/data.bin", "data")
+        let link = fx.url("home/Downloads/data.bin")
+        try FileManager.default.createDirectory(at: link.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try FileManager.default.linkItem(at: original, to: link)
+        let trasher = FakeTrasher()
+        let report = remover(fx, trasher).remove([finding(link)], policy: .trash)
+        #expect(report.removed.map(\.url) == [link])
+        #expect(FileManager.default.fileExists(atPath: original.path))
+        #expect(try String(contentsOf: original, encoding: .utf8) == "data")
+    }
+}

@@ -20,6 +20,7 @@ Native macOS app (SwiftUI) that uninstalls apps with their leftovers and cleans 
 
 - All locations come from an injected `SiftPaths`; tests point it at temp dirs. No filesystem mocks: tests use real temporary file trees. System calls go through `CommandRunner` / `SystemLookups` fakes.
 - Safety rules live in `Remover` / `RemovalRoots`: only items strictly inside the allowed roots, never a root itself, paths canonicalized first, symlinks removed as links and never followed, root-owned items skipped. Do not weaken these; extend tests when touching them.
+- Two removal scopes: `RemovalRoots.make` (uninstall and junk: Library scan dirs, Applications folders, dev cache parents) and `RemovalRoots.largeFiles` (Large Files and the installers junk category: home minus the `LargeFilesScope` deny list, same volume only). The scope carries its own rules (`filesOnly`, `trashOnly`) and `Remover` enforces them; never add a caller-side flag for that.
 - Uninstall order: unload launch items, move the app to the Trash, and only if that succeeds, remove leftovers. App failure leaves leftovers alone.
 - Localization via `.lproj` strings; a parity test keeps en and ru keys identical. Add both when adding a string.
 

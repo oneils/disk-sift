@@ -46,7 +46,10 @@ import Testing
     }
 
     @Test func everySkipReasonHasATitle() {
-        let reasons: [SkipReason] = [.outsideRoots, .needsAdmin, .permissionDenied, .inUse, .vanished, .appNotRemoved]
+        let reasons: [SkipReason] = [
+            .outsideRoots, .needsAdmin, .permissionDenied, .inUse, .vanished, .appNotRemoved, .notAFile,
+            .policyNotAllowed,
+        ]
         #expect(reasons.allSatisfy { !$0.titleKey.isEmpty })
         #expect(SkipReason.vanished.hintKey == nil)
         #expect(SkipReason.inUse.hintKey != nil)

@@ -100,12 +100,12 @@
 - Create: `Sources/SiftCore/LargeFiles/LargeFilesScope.swift`
 - Create: `Tests/SiftCoreTests/LargeFilesScopeTests.swift`
 
-- [ ] add `LargeFilesScope` (Sendable value: canonical home, home `st_dev`, deny rules incl. VM/library package extensions) with `isDenied(_ canonical: CanonicalPath) -> Bool` (includes the volume check) and `shouldSkip(directory:isPackage:volume:)` for the scanner
-- [ ] add `RemovalRoots.Kind` and `RemovalRoots.largeFiles(paths)` whose `allows` is: strictly inside canonical home, not home itself, not denied, same volume; expose `filesOnly` / `trashOnly`; keep `make(paths)` and its `allows` behavior unchanged
-- [ ] write tests: allowed file in `~/Downloads`, `~/Movies`, `~/.ollama`; denied `~/Library/...`, `~/.Trash/...`, `~/Applications/...`, file inside `X.app`, inside `Photos Library.photoslibrary`, inside `repo/.git/objects`; home itself; path outside home
-- [ ] write tests: case-insensitive matching; a symlinked directory inside home pointing to `~/Library` is resolved and refused; a file inside `VM.utm` is refused even without Launch Services knowing the type
-- [ ] write tests: different volume refused (unit test `isDenied` with an injected/foreign `st_dev`; a real mounted disk image is a Post-Completion check)
-- [ ] run `make test` - must pass before task 2
+- [x] add `LargeFilesScope` (Sendable value: canonical home, home `st_dev`, deny rules incl. VM/library package extensions) with `isDenied(_ canonical: CanonicalPath) -> Bool` (includes the volume check) and `shouldSkip(directory:isPackage:volume:)` for the scanner
+- [x] add `RemovalRoots.Kind` and `RemovalRoots.largeFiles(paths)` whose `allows` is: strictly inside canonical home, not home itself, not denied, same volume; expose `filesOnly` / `trashOnly`; keep `make(paths)` and its `allows` behavior unchanged
+- [x] write tests: allowed file in `~/Downloads`, `~/Movies`, `~/.ollama`; denied `~/Library/...`, `~/.Trash/...`, `~/Applications/...`, file inside `X.app`, inside `Photos Library.photoslibrary`, inside `repo/.git/objects`; home itself; path outside home
+- [x] write tests: case-insensitive matching; a symlinked directory inside home pointing to `~/Library` is resolved and refused; a file inside `VM.utm` is refused even without Launch Services knowing the type
+- [x] write tests: different volume refused (unit test `isDenied` with an injected/foreign `st_dev`; a real mounted disk image is a Post-Completion check)
+- [x] run `make test` - must pass before task 2
 
 ### Task 2: `Remover` enforces the scope's files-only and Trash-only rules
 
@@ -115,13 +115,14 @@
 - Modify: `Sources/DiskSift/Shared/ReportOutcome.swift`
 - Modify: `Tests/SiftCoreTests/RemoverTests.swift`
 
-- [ ] `removeOne` reads `roots.filesOnly`: require `S_IFREG` after `lstat`, otherwise skip with new `SkipReason.notAFile`
-- [ ] `remove(_:policy:)` (sync and async) with `.delete` on a `trashOnly` scope skips every item with new `SkipReason.policyNotAllowed`, touching nothing
-- [ ] add `titleKey` / `hintKey` for `.notAFile` and `.policyNotAllowed` in `ReportOutcome.swift` with en + ru strings
-- [ ] write tests (real temp tree, fake trasher): `Remover(roots: .largeFiles(paths))` with no extra arguments trashes a file in `~/Downloads`, refuses a directory and denied paths with the right reasons, and refuses `.delete` for everything
-- [ ] write tests: a symlink in `~/Downloads` is skipped with `.notAFile` and its target is untouched; a hard link in `~/Downloads` to a file under `~/Library` is allowed and only the link is trashed (documented on purpose)
-- [ ] write tests: existing `Remover` tests unchanged and green (`.library` scope)
-- [ ] run `make test` - must pass before task 3
+- [x] `removeOne` reads `roots.filesOnly`: require `S_IFREG` after `lstat`, otherwise skip with new `SkipReason.notAFile`
+- [x] `remove(_:policy:)` (sync and async) with `.delete` on a `trashOnly` scope skips every item with new `SkipReason.policyNotAllowed`, touching nothing
+- [x] add `titleKey` / `hintKey` for `.notAFile` and `.policyNotAllowed` in `ReportOutcome.swift` with en + ru strings
+- [x] write tests (real temp tree, fake trasher): `Remover(roots: .largeFiles(paths))` with no extra arguments trashes a file in `~/Downloads`, refuses a directory and denied paths with the right reasons, and refuses `.delete` for everything
+- [x] write tests: a symlink in `~/Downloads` is skipped with `.notAFile` and its target is untouched; a hard link in `~/Downloads` to a file under `~/Library` is allowed and only the link is trashed (documented on purpose)
+- [x] ➕ added `FindingSource.largeFile` here (needed by the tests), moved from Task 6
+- [x] write tests: existing `Remover` tests unchanged and green (`.library` scope)
+- [x] run `make test` - must pass before task 3
 
 ### Task 3: Document the new scope
 
@@ -129,9 +130,9 @@
 - Modify: `README.md`
 - Modify: `CLAUDE.md`
 
-- [ ] add a Safety paragraph in `README.md`: the large-files scope, its deny list, files only, Trash only
-- [ ] note in `CLAUDE.md` Conventions that there are two removal scopes and which features use which
-- [ ] run `make test` and `make lint`
+- [x] add a Safety paragraph in `README.md`: the large-files scope, its deny list, files only, Trash only
+- [x] note in `CLAUDE.md` Conventions that there are two removal scopes and which features use which
+- [x] run `make test` and `make lint`
 
 ### PR 2: Large Files tab
 
@@ -171,7 +172,7 @@
 - Modify: `Tests/DiskSiftTests/ReportOutcomeTests.swift`
 
 - [ ] implement phases, `files`, `threshold` + `visibleFiles`, `checked`, `sort: LargeFileSort`, `unreadable`, `scanStopped`, reveal/`missingItem`; inject `LastUsedLookup` and fill "Opened" dates off the main actor after each found file, falling back to modification date
-- [ ] `LargeFile` → `Finding` with `FindingSource.largeFile`
+- [ ] `LargeFile` → `Finding` with `FindingSource.largeFile` (case added in Task 2)
 - [ ] introduce `ReportContext` (`.uninstall` / `.cleanup` / `.largeFiles`) in `ReportOutcome`/`ReportSheet`, update the two existing call sites (`UninstallView.swift`, `JunkView.swift`), neutral `outsideRoots` hint; en + ru strings
 - [ ] implement trashing via injected `FindingRemoving` (live: `Remover(roots: .largeFiles(paths), filesOnly: true)`), progress, stop after current item, report; remove trashed files from the list
 - [ ] write tests: start state; scan collects files; threshold filters without rescanning and hidden items leave the selection; nothing selected by default; sort keeps selection
