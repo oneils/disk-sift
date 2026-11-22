@@ -33,14 +33,9 @@ public struct UserCachesCategory: JunkCategory {
         return result
     }
 
+    /// User caches and logs belong to many different apps, so nothing is preselected:
+    /// the user picks what to delete.
     public func checkedByDefault(_ finding: Finding, running: [RunningApp]) -> Bool {
-        guard !finding.requiresRoot else { return false }
-        let name = finding.url.lastPathComponent.lowercased()
-        if name.hasPrefix("com.apple.") { return false }
-        for app in running {
-            guard let bundleID = app.bundleID?.lowercased() else { continue }
-            if name == bundleID || name.hasPrefix(bundleID + ".") { return false }
-        }
-        return true
+        false
     }
 }

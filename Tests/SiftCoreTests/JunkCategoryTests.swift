@@ -44,9 +44,7 @@ struct JunkCategoryTests {
         let caches = try await cat.scan(paths: fx.paths)
         var checked: [String: Bool] = [:]
         for f in caches { checked[f.url.lastPathComponent] = cat.checkedByDefault(f, running: running) }
-        #expect(checked["com.apple.Safari"] == false)
-        #expect(checked["org.mozilla.firefox"] == false)
-        #expect(checked["org.mozilla.firefox.helper"] == false)
-        #expect(checked["com.other"] == true)
+        #expect(checked.count == 4)
+        #expect(checked.values.allSatisfy { $0 == false }, "user caches and logs are never preselected")
     }
 }

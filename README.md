@@ -20,7 +20,7 @@ Every finding shows its size and how sure DiskSift is that it belongs to the app
 - user caches and logs (`~/Library/Caches`, `~/Library/Logs`)
 - developer junk: Xcode DerivedData, Archives, iOS DeviceSupport, simulator caches, Homebrew, npm, pip, cargo and Go caches
 
-Uncheck what you want to keep and delete the rest. Caches are rebuilt by the apps that own them, so they are deleted permanently and the space is freed right away. Caches of apps that are running right now are left unchecked.
+User caches and logs start unchecked: pick what you want to delete. Developer caches start checked, except Xcode Archives (they hold dSYMs). Caches are rebuilt by the apps that own them, so they are deleted permanently and the space is freed right away.
 
 Sizes are allocated sizes on disk. Because of APFS clones and local Time Machine snapshots, the space actually freed can be smaller.
 
