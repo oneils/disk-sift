@@ -64,6 +64,9 @@ import Testing
         #expect(ReportOutcome.success.titleKey(context: .uninstall) == "Uninstall finished")
         #expect(ReportOutcome.success.titleKey(context: .cleanup) == "Cleanup finished")
         #expect(ReportContext.largeFiles.policy == .trash)
+        for outcome in outcomes { #expect(!outcome.titleKey(context: .leftovers).contains("Uninstall")) }
+        #expect(ReportOutcome.success.titleKey(context: .leftovers) == "Leftovers moved to Trash")
+        #expect(ReportContext.leftovers.policy == .trash)
         #expect(ReportContext.cleanup.policy == .delete)
     }
 

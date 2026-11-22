@@ -28,6 +28,8 @@ public enum FindingSource: Hashable, Sendable {
     case junk(categoryID: String)
     /// A file from the Large Files report.
     case largeFile
+    /// Left behind by an app that is no longer installed; `groupID` is that app's bundle ID (lowercased).
+    case orphan(groupID: String)
 }
 
 /// The concrete match behind a finding, so the UI can explain it instead of showing a bare confidence.
@@ -50,6 +52,10 @@ public enum MatchEvidence: Hashable, Sendable, CaseIterable {
     case privilegedHelper
     /// Installed by a `.pkg` whose package ID matches the app.
     case pkgReceipt
+    /// Named after a bundle ID that no installed or running app has.
+    case appNotInstalled
+    /// A launch agent whose program, once inside an Applications folder, no longer exists.
+    case launchProgramMissing
 
     /// Data other apps may also use.
     public var isShared: Bool {

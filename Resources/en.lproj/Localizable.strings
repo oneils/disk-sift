@@ -192,3 +192,21 @@
 "Disk images and packages in Downloads and on the Desktop. Moved to the Trash; those older than 30 days are selected." = "Disk images and packages in Downloads and on the Desktop. Moved to the Trash; those older than 30 days are selected.";
 "Local backups of your devices; this may be the only copy of a device's data. Moved to the Trash; nothing is selected." = "Local backups of your devices; this may be the only copy of a device's data. Moved to the Trash; nothing is selected.";
 "Attachments Mail saved when you opened them; Mail downloads them again when needed. Deleted permanently." = "Attachments Mail saved when you opened them; Mail downloads them again when needed. Deleted permanently.";
+
+// Leftovers of removed apps
+"No installed app uses this bundle identifier." = "No installed app uses this bundle identifier.";
+"Background service whose program no longer exists." = "Background service whose program no longer exists.";
+"Leftovers moved to Trash" = "Leftovers moved to Trash";
+"Some leftovers moved to Trash" = "Some leftovers moved to Trash";
+"Moving leftovers to Trash stopped" = "Moving leftovers to Trash stopped";
+"Leftovers were not moved to Trash" = "Leftovers were not moved to Trash";
+"Find Leftovers of Removed Apps…" = "Find Leftovers of Removed Apps…";
+"Look for files that apps you already deleted left in your Library." = "Look for files that apps you already deleted left in your Library.";
+"Looking for leftovers of removed apps…" = "Looking for leftovers of removed apps…";
+"No leftovers of removed apps found" = "No leftovers of removed apps found";
+"Nothing in your Library belongs to an app that is no longer installed." = "Nothing in your Library belongs to an app that is no longer installed.";
+"Nothing in your Library belongs to an app that is no longer installed. Containers were not checked without Full Disk Access." = "Nothing in your Library belongs to an app that is no longer installed. Containers were not checked without Full Disk Access.";
+"Back" = "Back";
+"Leftovers of removed apps" = "Leftovers of removed apps";
+"Apps that are no longer installed left these items. Review them: nothing is selected." = "Apps that are no longer installed left these items. Review them: nothing is selected.";
+"Containers were not checked without Full Disk Access." = "Containers were not checked without Full Disk Access.";

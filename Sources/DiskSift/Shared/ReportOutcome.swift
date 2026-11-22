@@ -5,6 +5,7 @@ enum ReportContext: Equatable {
     case uninstall
     case cleanup
     case largeFiles
+    case leftovers
 
     /// How items of this action are removed (amount and note lines follow it).
     var policy: RemovalPolicy { self == .cleanup ? .delete : .trash }
@@ -50,6 +51,10 @@ enum ReportOutcome: Equatable {
         case (.partial, .largeFiles): "Some files moved to Trash"
         case (.stopped, .largeFiles): "Moving to Trash stopped"
         case (.failed, .largeFiles): "Files were not moved to Trash"
+        case (.success, .leftovers): "Leftovers moved to Trash"
+        case (.partial, .leftovers): "Some leftovers moved to Trash"
+        case (.stopped, .leftovers): "Moving leftovers to Trash stopped"
+        case (.failed, .leftovers): "Leftovers were not moved to Trash"
         }
     }
 

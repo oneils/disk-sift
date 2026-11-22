@@ -30,25 +30,9 @@ public struct Uninstaller: Sendable {
         appFinding.size = try? await DirectorySizer.size(of: app.url).bytes
 
         // 1. unload user-domain launch agents; system-domain items are root-only and never touched
-        var labels: [String] = []
-        for finding in leftovers {
-            for case .launchItem(let label, .user) in finding.sources.sorted(by: { "\($0)" < "\($1)" })
-            where !labels.contains(label) {
-                labels.append(label)
-            }
-        }
-        for label in labels {
-            if Task.isCancelled {
-                return RemovalReport(unprocessed: [appFinding] + leftovers, stopped: true)
-            }
-            do {
-                let result = try await runner.run("/bin/launchctl", ["bootout", "gui/\(uid)/\(label)"])
-                if result.status != 0 {
-                    Log.removal.info("launchctl bootout \(label, privacy: .public) exited \(result.status)")
-                }
-            } catch {
-                Log.removal.info("launchctl bootout \(label, privacy: .public) failed to run")
-            }
+        let unloader = LaunchAgentUnloader(runner: runner, uid: uid)
+        guard await unloader.unload(LaunchAgentUnloader.labels(in: leftovers)) else {
+            return RemovalReport(unprocessed: [appFinding] + leftovers, stopped: true)
         }
 
         if Task.isCancelled {

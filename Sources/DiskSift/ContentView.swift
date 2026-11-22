@@ -27,13 +27,16 @@ final class ShellModel {
     let uninstall: UninstallModel
     let junk: JunkModel
     let largeFiles: LargeFilesModel
+    let orphans: OrphansModel
 
     init(
-        uninstall: UninstallModel = .live(), junk: JunkModel = .live(), largeFiles: LargeFilesModel = .live()
+        uninstall: UninstallModel = .live(), junk: JunkModel = .live(), largeFiles: LargeFilesModel = .live(),
+        orphans: OrphansModel = .live()
     ) {
         self.uninstall = uninstall
         self.junk = junk
         self.largeFiles = largeFiles
+        self.orphans = orphans
     }
 
     func refreshFDA() {
@@ -55,7 +58,11 @@ struct ContentView: View {
                 if !model.fdaGranted { FDABanner() }
                 switch model.selection ?? .uninstall {
                 case .uninstall:
-                    UninstallView(model: model.uninstall)
+                    if model.orphans.phase != .idle {
+                        OrphansView(model: model.orphans, fdaGranted: model.fdaGranted)
+                    } else {
+                        UninstallView(model: model.uninstall) { model.orphans.startScan() }
+                    }
                 case .junk:
                     JunkView(model: model.junk)
                 case .largeFiles:
