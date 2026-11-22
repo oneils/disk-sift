@@ -169,7 +169,9 @@ final class JunkModel {
         let items = selectedFindings
         guard !items.isEmpty else { return }
         phase = .deleting
-        let report = remover.remove(items, policy: .delete)
+        let remover = remover
+        // deleting large trees (DerivedData) must not block the main actor
+        let report = await Task.detached { remover.remove(items, policy: .delete) }.value
         let gone = Set(report.removed.map { $0.url.standardizedFileURL.path })
         for index in rows.indices {
             rows[index].findings.removeAll { gone.contains($0.url.standardizedFileURL.path) }
