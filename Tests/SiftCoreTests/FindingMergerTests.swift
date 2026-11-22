@@ -20,6 +20,21 @@ import Testing
         #expect(Confidence.allCases.max() == .high)
     }
 
+    @Test func evidenceUnionedForDuplicatesAndAncestors() throws {
+        let merged = FindingMerger.merge([
+            Finding(
+                url: URL(fileURLWithPath: "/a/b"), confidence: .high, sources: [.libraryPath], evidence: [.bundleIDName]
+            ),
+            Finding(
+                url: URL(fileURLWithPath: "/a/b"), confidence: .low, sources: [.pkgReceipt], evidence: [.pkgReceipt]),
+            Finding(
+                url: URL(fileURLWithPath: "/a/b/c"), confidence: .low, sources: [.libraryPath], evidence: [.appName]),
+        ])
+        let only = try #require(merged.first)
+        #expect(merged.count == 1)
+        #expect(only.evidence == [.bundleIDName, .pkgReceipt, .appName])
+    }
+
     @Test func emptyInput() {
         #expect(FindingMerger.merge([]).isEmpty)
     }

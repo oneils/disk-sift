@@ -27,15 +27,16 @@ public struct LaunchItemsSource: LeftoverSource {
                 }
                 let label = (plist["Label"] as? String) ?? (name as NSString).deletingPathExtension
                 let program = (plist["Program"] as? String) ?? (plist["ProgramArguments"] as? [String])?.first
-                guard
-                    Self.matchesID(label, ids: ids)
-                        || Self.runsFromApp(program, appPrefix: appPrefix)
-                        || Self.isHelper(program, helpersDir: helpersDir, ids: ids)
-                else { continue }
+                var evidence: Set<MatchEvidence> = []
+                if Self.matchesID(label, ids: ids) { evidence.insert(.launchLabel) }
+                if Self.runsFromApp(program, appPrefix: appPrefix) { evidence.insert(.launchProgramInApp) }
+                if Self.isHelper(program, helpersDir: helpersDir, ids: ids) { evidence.insert(.privilegedHelper) }
+                guard !evidence.isEmpty else { continue }
                 result.append(
                     Finding(
                         url: url, confidence: .high, sources: [.launchItem(label: label, domain: domain)],
-                        requiresRoot: domain == .system || !Writability.canRemove(url, policy: .trash)))
+                        requiresRoot: domain == .system || !Writability.canRemove(url, policy: .trash),
+                        evidence: evidence))
             }
         }
         return result

@@ -42,6 +42,10 @@ import Testing
         }
         #expect(found["home/Library/Group Containers/group.foo.shared"]?.sources == [.groupContainer])
         #expect(found["home/Library/Preferences/com.foo.bar.plist"]?.sources == [.libraryPath])
+        #expect(found["home/Library/Preferences/com.foo.bar.plist"]?.evidence == [.bundleIDName])
+        let group = found["home/Library/Group Containers/group.foo.shared"]
+        #expect(group?.evidence == [.appGroup])
+        #expect(group?.isShared == true)
     }
 
     @Test func teamPrefixedGroupNotInEntitlementIsLow() async throws {
@@ -49,6 +53,7 @@ import Testing
         try fx.mkdir("home/Library/Group Containers/UBF8T346G9.Office")
         let found = try await scan(fx, app(fx, signing: SigningInfo(teamID: "UBF8T346G9")))
         #expect(found["home/Library/Group Containers/UBF8T346G9.Office"]?.confidence == .low)
+        #expect(found["home/Library/Group Containers/UBF8T346G9.Office"]?.evidence == [.teamPrefix])
     }
 
     @Test func otherInstalledAppDowngrades() async throws {
@@ -57,7 +62,10 @@ import Testing
         try fx.mkdir("home/Library/Application Support/com.foo.bar")
         let found = try await scan(fx, app(fx), installed: ["com.foo.bar.lite"])
         #expect(found["home/Library/Application Support/com.foo.bar.Lite"]?.confidence == .low)
+        #expect(
+            found["home/Library/Application Support/com.foo.bar.Lite"]?.evidence == [.bundleIDName, .otherAppInstalled])
         #expect(found["home/Library/Application Support/com.foo.bar"]?.confidence == .high)
+        #expect(found["home/Library/Application Support/com.foo.bar"]?.isShared == false)
     }
 
     @Test func notInstalledSuffixStaysHigh() async throws {

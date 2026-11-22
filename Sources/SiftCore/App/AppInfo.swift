@@ -21,13 +21,19 @@ public struct AppInfo: Sendable {
     public var url: URL
     public var bundleID: String
     public var name: String
+    /// `CFBundleShortVersionString`, when present.
+    public var version: String?
     public var signing: SigningInfo
     public var nestedBundleIDs: [String]
 
-    public init(url: URL, bundleID: String, name: String, signing: SigningInfo, nestedBundleIDs: [String]) {
+    public init(
+        url: URL, bundleID: String, name: String, version: String? = nil, signing: SigningInfo,
+        nestedBundleIDs: [String]
+    ) {
         self.url = url
         self.bundleID = bundleID
         self.name = name
+        self.version = version
         self.signing = signing
         self.nestedBundleIDs = nestedBundleIDs
     }
@@ -51,8 +57,9 @@ public struct AppInfo: Sendable {
             [plist["CFBundleDisplayName"], plist["CFBundleName"]]
             .compactMap { $0 as? String }
             .first { !$0.isEmpty } ?? fallback
+        let version = (plist["CFBundleShortVersionString"] as? String).flatMap { $0.isEmpty ? nil : $0 }
         return AppInfo(
-            url: url, bundleID: bundleID, name: name, signing: signing,
+            url: url, bundleID: bundleID, name: name, version: version, signing: signing,
             nestedBundleIDs: nestedBundleIDs(in: url, excluding: bundleID))
     }
 

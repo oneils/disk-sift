@@ -47,6 +47,24 @@ private final class FakeUninstaller: AppUninstalling {
     }
 }
 
+/// Fails with `first`, then returns `then`.
+private final class SwitchingValidator: AppValidating {
+    let first: Result<AppInfo, ValidationError>
+    let then: Result<AppInfo, ValidationError>
+    let calls = OSAllocatedUnfairLock(initialState: 0)
+    init(first: Result<AppInfo, ValidationError>, then: Result<AppInfo, ValidationError>) {
+        self.first = first
+        self.then = then
+    }
+    func validate(_ url: URL) throws -> AppInfo {
+        let n = calls.withLock { count in
+            count += 1
+            return count
+        }
+        return try (n == 1 ? first : then).get()
+    }
+}
+
 /// Reports `processes` as running until each is terminated (unless `ignoresTerminate`).
 private final class FakeProcesses: RunningApps, ProcessTerminating {
     private let state: OSAllocatedUnfairLock<[RunningApp]>
@@ -88,14 +106,18 @@ private final class FakeProcesses: RunningApps, ProcessTerminating {
             requiresRoot: root)
     }
 
+    static let paths = SiftPaths(root: URL(fileURLWithPath: "/r"))
+
     fileprivate func model(
         validate: Result<AppInfo, ValidationError>? = nil, findings: [Finding] = [],
-        processes: FakeProcesses = FakeProcesses([]), uninstaller: FakeUninstaller = FakeUninstaller()
+        processes: FakeProcesses = FakeProcesses([]), uninstaller: FakeUninstaller = FakeUninstaller(),
+        validator: (any AppValidating)? = nil, revealer: FakeRevealer = FakeRevealer()
     ) -> UninstallModel {
         UninstallModel(
-            validator: FakeValidator(result: validate ?? .success(info)),
+            validator: validator ?? FakeValidator(result: validate ?? .success(info)),
             scanner: FakeScanner(findings: findings), uninstaller: uninstaller, runningApps: processes,
-            terminator: processes, quitTimeout: .milliseconds(30), pollInterval: .milliseconds(10))
+            terminator: processes, quitTimeout: .milliseconds(30), pollInterval: .milliseconds(10),
+            paths: Self.paths, sizer: { _ in 1000 }, revealer: revealer)
     }
 
     @Test func invalidDropShowsError() async {
@@ -103,6 +125,85 @@ private final class FakeProcesses: RunningApps, ProcessTerminating {
         await m.drop([URL(fileURLWithPath: "/tmp/x.txt")])
         #expect(m.phase == .idle)
         #expect(m.errorKey == ValidationError.notAnApp.messageKey)
+    }
+
+    @Test func pickerUsesSameValidationAndClearsPreviousError() async {
+        let validator = SwitchingValidator(first: .failure(.outsideApplications), then: .success(info))
+        let m = model(validator: validator)
+        await m.select(URL(fileURLWithPath: "/tmp/Foo.app"))
+        #expect(m.phase == .idle)
+        #expect(m.errorKey == ValidationError.outsideApplications.messageKey)
+        #expect(m.canChooseApp)
+        await m.select(appURL)
+        #expect(m.errorKey == nil)
+        #expect(m.phase == .results)
+        #expect(!m.canChooseApp)
+        // a second choice while results are shown is ignored
+        await m.select(URL(fileURLWithPath: "/Applications/Other.app"))
+        #expect(validator.calls.withLock { $0 } == 2)
+    }
+
+    @Test func pickedRunningAppAsksToQuit() async {
+        let main = RunningApp(bundleID: "com.foo.app", bundleURL: appURL, pid: 1)
+        let m = model(processes: FakeProcesses([main]))
+        await m.select(appURL)
+        #expect(m.phase == .quitPrompt(running: [main]))
+    }
+
+    @Test func summaryTotalsAndReset() async {
+        let high = finding("/r/home/Library/Caches/com.foo.app", .high, size: 100)
+        let low = finding("/r/home/Library/Preferences/foo.plist", .low, size: 5)
+        let m = model(findings: [high, low])
+        await m.select(appURL)
+        #expect(m.appSize == 1000)
+        #expect(m.leftoversTotal == 105)
+        #expect(m.leftoversCount == 2)
+        #expect(m.selectedTotal == 100)
+        #expect(m.totalToTrash == 1100)
+        m.showsDetails = true
+        m.reset()
+        #expect(m.appSize == nil)
+        #expect(!m.showsDetails)
+        #expect(m.totalToTrash == 0)
+    }
+
+    @Test func groupsOrderedByKindUserBeforeSystem() async {
+        let m = model(findings: [
+            finding("/r/Library/Caches/com.foo.app", .high),
+            finding("/r/home/Library/Preferences/com.foo.app.plist", .high),
+            finding("/r/home/Library/Caches/com.foo.app", .high),
+            finding("/r/home/Library/Application Support/com.foo.app", .high),
+        ])
+        await m.select(appURL)
+        let ordered = m.orderedGroups
+        #expect(
+            ordered.map(\.parent.path) == [
+                "/r/home/Library/Application Support", "/r/home/Library/Caches", "/r/Library/Caches",
+                "/r/home/Library/Preferences",
+            ])
+        #expect(ordered.map { m.kind(of: $0) } == [.applicationSupport, .caches, .caches, .preferences])
+        #expect(m.isSystem(ordered[2]))
+    }
+
+    @Test func sortChangesOrderNotSelection() async {
+        let a = finding("/r/home/Library/Caches/a.small", .high, size: 1)
+        let b = finding("/r/home/Library/Caches/b.big", .high, size: 50)
+        let m = model(findings: [a, b])
+        await m.select(appURL)
+        let group = m.groups[0]
+        #expect(m.sortedFindings(group).map(\.url.lastPathComponent) == ["b.big", "a.small"])
+        m.setChecked(a, false)
+        m.sort = .name
+        #expect(m.sortedFindings(group).map(\.url.lastPathComponent) == ["a.small", "b.big"])
+        #expect(m.selectedFindings == [b])
+    }
+
+    @Test func revealMissingItem() async {
+        let m = model(revealer: FakeRevealer(existing: ["/r/x"]))
+        m.reveal(URL(fileURLWithPath: "/r/x"))
+        #expect(m.missingItem == nil)
+        m.reveal(URL(fileURLWithPath: "/r/gone"))
+        #expect(m.missingItem?.path == "/r/gone")
     }
 
     @Test func notRemovableAppShowsAdminError() async {

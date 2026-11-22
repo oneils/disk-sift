@@ -52,7 +52,8 @@ import Testing
                 "Library/Application Support/Foo/Bar", "Library/Application Support/Foo/Shared",
                 "Library/Logs/Bar.log",
             ])
-        #expect(found.allSatisfy { $0.confidence == .low && $0.sources == [.pkgReceipt] })
+        #expect(
+            found.allSatisfy { $0.confidence == .low && $0.sources == [.pkgReceipt] && $0.evidence == [.pkgReceipt] })
     }
 
     @Test func fullyOwnedVendorDirIsReportedWhole() async throws {

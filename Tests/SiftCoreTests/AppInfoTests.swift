@@ -27,6 +27,16 @@ import Testing
             "Applications/X.app/Contents/Info.plist",
             data: plist(["CFBundleIdentifier": "com.foo.x", "CFBundleName": "Plain", "CFBundleDisplayName": "Fancy"]))
         #expect(try AppInfo.load(app).name == "Fancy")
+        #expect(try AppInfo.load(app).version == nil)
+    }
+
+    @Test func shortVersionIsRead() throws {
+        let fx = try Fixture()
+        let app = fx.url("Applications/X.app")
+        try fx.write(
+            "Applications/X.app/Contents/Info.plist",
+            data: plist(["CFBundleIdentifier": "com.foo.x", "CFBundleShortVersionString": "2.4.1"]))
+        #expect(try AppInfo.load(app).version == "2.4.1")
     }
 
     @Test func nestedBundleIDsFromHelpersAndExtensions() throws {

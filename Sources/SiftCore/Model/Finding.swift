@@ -28,6 +28,33 @@ public enum FindingSource: Hashable, Sendable {
     case junk(categoryID: String)
 }
 
+/// The concrete match behind a finding, so the UI can explain it instead of showing a bare confidence.
+public enum MatchEvidence: Hashable, Sendable, CaseIterable {
+    /// Named after the app's (or a nested helper's) bundle ID.
+    case bundleIDName
+    /// Named like the app, with no bundle ID in the name.
+    case appName
+    /// An app group container listed in the app's signature; other apps of the developer can share it.
+    case appGroup
+    /// Starts with the developer's Team ID; may belong to any app of that developer.
+    case teamPrefix
+    /// Another installed app owns a longer bundle ID matching the name.
+    case otherAppInstalled
+    /// A launchd job whose label matches one of the app's bundle IDs.
+    case launchLabel
+    /// A launchd job that runs a program inside the app bundle.
+    case launchProgramInApp
+    /// A launchd job for a privileged helper named after the app.
+    case privilegedHelper
+    /// Installed by a `.pkg` whose package ID matches the app.
+    case pkgReceipt
+
+    /// Data other apps may also use.
+    public var isShared: Bool {
+        self == .appGroup || self == .teamPrefix || self == .otherAppInstalled
+    }
+}
+
 /// A file or directory found by a scanner.
 public struct Finding: Identifiable, Hashable, Sendable {
     public var url: URL
@@ -39,12 +66,17 @@ public struct Finding: Identifiable, Hashable, Sendable {
     public var requiresRoot: Bool
     /// Some of it couldn't be read (size is partial or unknown).
     public var inaccessible: Bool
+    /// Why it matched (leftovers only).
+    public var evidence: Set<MatchEvidence>
 
     public var id: String { url.path }
 
+    /// Other apps may use this data too.
+    public var isShared: Bool { evidence.contains { $0.isShared } }
+
     public init(
         url: URL, size: Int64? = nil, confidence: Confidence, sources: Set<FindingSource>,
-        requiresRoot: Bool = false, inaccessible: Bool = false
+        requiresRoot: Bool = false, inaccessible: Bool = false, evidence: Set<MatchEvidence> = []
     ) {
         self.url = url
         self.size = size
@@ -52,6 +84,7 @@ public struct Finding: Identifiable, Hashable, Sendable {
         self.sources = sources
         self.requiresRoot = requiresRoot
         self.inaccessible = inaccessible
+        self.evidence = evidence
     }
 }
 
