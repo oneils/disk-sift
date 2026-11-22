@@ -16,18 +16,12 @@
   "lineLength": 120,
   "maximumBlankLines": 1,
   "multiElementCollectionTrailingCommas": true,
-  "multilineTrailingCommaBehavior": "keptAsWritten",
   "noAssignmentInExpressions": {
     "allowedFunctions": [
       "XCTAssertNoThrow"
     ]
   },
-  "orderedImports": {
-    "includeConditionalImports": false,
-    "shouldGroupImports": true
-  },
   "prioritizeKeepingFunctionOutputTogether": false,
-  "reflowMultilineStringLiterals": "never",
   "respectsExistingLineBreaks": true,
   "rules": {
     "AllPublicDeclarationsHaveDocumentation": false,
@@ -49,7 +43,6 @@
     "NoAssignmentInExpressions": true,
     "NoBlockComments": true,
     "NoCasesWithOnlyFallthrough": true,
-    "NoEmptyLinesOpeningClosingBraces": false,
     "NoEmptyTrailingClosureParentheses": true,
     "NoLabelsInCasePatterns": true,
     "NoLeadingUnderscores": false,
