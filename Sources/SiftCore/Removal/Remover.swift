@@ -12,6 +12,7 @@ public struct Remover: Sendable {
     }
 
     public func remove(_ findings: [Finding], policy: RemovalPolicy) -> RemovalReport {
+        if let refused = refusedUpFront(findings, policy: policy) { return refused }
         var report = RemovalReport()
         for finding in findings {
             switch removeOne(finding.url, policy: policy) {
@@ -27,6 +28,7 @@ public struct Remover: Sendable {
         policy: RemovalPolicy,
         onProgress: (@Sendable (RemovalProgressState) async -> Void)? = nil
     ) async -> RemovalReport {
+        if let refused = refusedUpFront(findings, policy: policy) { return refused }
         var report = RemovalReport()
         var processedBytes: Int64 = 0
         let total = findings.count
@@ -77,6 +79,13 @@ public struct Remover: Sendable {
         }
     }
 
+    /// A Trash-only scope never deletes permanently: every item is skipped and nothing is touched.
+    private func refusedUpFront(_ findings: [Finding], policy: RemovalPolicy) -> RemovalReport? {
+        guard policy == .delete, roots.trashOnly else { return nil }
+        Log.removal.error("refusing permanent deletion in a Trash-only removal scope")
+        return RemovalReport(skipped: findings.map { SkippedItem(url: $0.url, reason: .policyNotAllowed) })
+    }
+
     /// `nil` on success, otherwise why the item was skipped.
     private func removeOne(_ url: URL, policy: RemovalPolicy) -> SkipReason? {
         let canonical: CanonicalPath
@@ -94,6 +103,8 @@ public struct Remover: Sendable {
         let target = canonical.url
         var st = stat()
         guard lstat(target.path, &st) == 0 else { return .vanished }
+        // checked on the item itself (lstat), so a symlink is refused rather than followed
+        if roots.filesOnly && (st.st_mode & S_IFMT) != S_IFREG { return .notAFile }
         guard Writability.canRemove(target, policy: policy) else { return .needsAdmin }
 
         do {

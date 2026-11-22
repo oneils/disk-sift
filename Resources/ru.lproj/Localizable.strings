@@ -144,7 +144,7 @@
 "Disk space is freed when you empty the Trash." = "Место на диске освободится после очистки Корзины.";
 "Free space may take a while to update because of APFS local snapshots." = "Свободное место может обновиться не сразу из-за локальных снимков APFS.";
 "Not removed: %lld items" = "Не удалено объектов: %lld";
-"DiskSift only removes items inside known Library locations." = "DiskSift удаляет только объекты в известных папках Library.";
+"DiskSift only removes items in locations it allows for this action." = "DiskSift удаляет только объекты в расположениях, разрешённых для этого действия.";
 "Remove it in Finder with an administrator account if you no longer need it." = "Если объект больше не нужен, удалите его в Finder с учётной записью администратора.";
 "Grant Full Disk Access in System Settings, then try again." = "Предоставьте полный доступ к диску в Системных настройках и повторите попытку.";
 "Quit the app that uses it, then try again." = "Закройте приложение, которое его использует, и повторите попытку.";
@@ -154,3 +154,9 @@
 "Selected" = "Выбрано";
 "Partly selected" = "Выбрано частично";
 "Not selected" = "Не выбрано";
+
+// Large files removal scope
+"Not a regular file" = "Не обычный файл";
+"Permanent deletion is not allowed here" = "Безвозвратное удаление здесь не разрешено";
+"Only files can be moved to the Trash from this list; use Finder for folders and links." = "Из этого списка в Корзину можно перемещать только файлы; папки и ссылки удаляйте в Finder.";
+"Items from this list can only be moved to the Trash." = "Объекты из этого списка можно только переместить в Корзину.";

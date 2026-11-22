@@ -2,12 +2,40 @@ import Foundation
 
 /// The only places DiskSift may remove things from. Built from the same constants the scanners use,
 /// so scanners and the remover cannot drift apart.
+///
+/// Two scopes exist: `.library` (uninstall and junk: inside the scanned Library folders, the
+/// Applications folders and dev cache parents) and `.largeFiles` (the home folder minus a deny list,
+/// regular files only, Trash only). The rules of a scope travel with it, so a `Remover` built on it
+/// enforces them without extra arguments.
 public struct RemovalRoots: Sendable {
+    public enum Kind: Sendable, Equatable {
+        case library
+        case largeFiles(LargeFilesScope)
+    }
+
     public let roots: [CanonicalPath]
+    public let kind: Kind
 
     public init(roots: [CanonicalPath]) {
         self.roots = roots
+        kind = .library
     }
+
+    private init(largeFiles scope: LargeFilesScope) {
+        roots = [scope.home]
+        kind = .largeFiles(scope)
+    }
+
+    /// Strictly inside the home folder, outside the large-files deny list, on the home volume.
+    public static func largeFiles(_ paths: SiftPaths) -> RemovalRoots {
+        RemovalRoots(largeFiles: LargeFilesScope(paths: paths))
+    }
+
+    /// Only regular files may be removed (no directories, no symlinks).
+    public var filesOnly: Bool { kind != .library }
+
+    /// Items may only be moved to the Trash, never deleted permanently.
+    public var trashOnly: Bool { kind != .library }
 
     public static func make(_ paths: SiftPaths) -> RemovalRoots {
         var urls = ScanLocations.leftoverDirs(paths)
@@ -26,13 +54,14 @@ public struct RemovalRoots: Sendable {
     /// Canonical path of `url` when it is strictly inside a root and is not a root itself
     /// (`~/Library/Caches` is never removable, even though `Preferences/ByHost` sits inside `Preferences`).
     public func allows(_ path: CanonicalPath) -> Bool {
+        if case .largeFiles(let scope) = kind { return !scope.isDenied(path) }
         let lower = path.path.lowercased()
         if roots.contains(where: { $0.path.lowercased() == lower }) { return false }
         return roots.contains { path.isStrictlyInside($0) }
     }
 
     /// Resolves a root that may not exist yet: the nearest existing ancestor is `realpath`ed.
-    private static func canonicalRoot(_ url: URL) -> CanonicalPath {
+    static func canonicalRoot(_ url: URL) -> CanonicalPath {
         if let resolved = try? CanonicalPath.of(url) { return resolved }
         var existing = url.standardizedFileURL
         var tail: [String] = []
