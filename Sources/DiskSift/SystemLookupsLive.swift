@@ -7,6 +7,12 @@ struct LiveInstalledApps: InstalledApps {
         return NSWorkspace.shared.urlsForApplications(withBundleIdentifier: bundleID)
             .contains { !$0.standardizedFileURL.path.hasPrefix(excluded) }
     }
+
+    func isKnownOutsideTrash(bundleID: String) -> Bool {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return NSWorkspace.shared.urlsForApplications(withBundleIdentifier: bundleID)
+            .contains { !TrashCheck.isInTrash($0, home: home) }
+    }
 }
 
 struct LiveRunningApps: RunningApps {

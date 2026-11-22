@@ -5,6 +5,8 @@ import UniformTypeIdentifiers
 
 struct UninstallView: View {
     @Bindable var model: UninstallModel
+    /// Opens the "leftovers of removed apps" flow.
+    var findLeftovers: () -> Void = {}
 
     var body: some View {
         content
@@ -101,6 +103,10 @@ struct UninstallView: View {
                 .disabled(!model.canChooseApp)
             Text("Applications from /Applications or ~/Applications")
                 .foregroundStyle(.secondary)
+            Button("Find Leftovers of Removed Apps…", action: findLeftovers)
+                .disabled(!model.canChooseApp)
+                .help(Text("Look for files that apps you already deleted left in your Library."))
+                .padding(.top, 16)
             if model.phase == .validating {
                 ProgressView().controlSize(.small)
             }
@@ -380,6 +386,8 @@ extension MatchEvidence {
         case .launchProgramInApp: "Background service that runs a program inside the app."
         case .privilegedHelper: "Privileged helper installed for the app."
         case .pkgReceipt: "Installed by the app's installer package."
+        case .appNotInstalled: "No installed app uses this bundle identifier."
+        case .launchProgramMissing: "Background service whose program no longer exists."
         }
     }
 }

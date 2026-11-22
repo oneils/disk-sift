@@ -33,6 +33,8 @@ Design notes and implementation plans are in [`docs/plans/completed/`](docs/plan
 
 Leftovers are grouped by location (Application Support, Caches, Preferences, Login Services and so on), and each one says why it matched and whether other apps may share it. The header shows the app's icon, version and size, plus the total that will go to the Trash. Every finding shows its size and how sure DiskSift is that it belongs to the app. Matches by bundle ID are checked by default. Matches by app name only, and data the vendor's other apps share (for example Office's group container), are left unchecked for you to review. DiskSift unloads the app's launch agents, then moves the app and the checked leftovers to the Trash, so you can put anything back.
 
+**Find leftovers of apps you already deleted.** Dragged an app to the Trash some time ago? **Find Leftovers of Removed Apps…** on the Uninstall screen looks through your Library for preferences, caches, Application Support, containers, saved state, logs and web data named after apps that are no longer installed, plus launch agents whose program is gone. The search is cautious: anything an installed or running app (or one of its helpers or extensions) may own is left out, Group Containers are not touched, and nothing is selected for you. Leftovers are grouped by app and moved to the Trash; launch agents are unloaded first.
+
 **Clean up junk.** One scan shows how much space these take:
 
 - user caches and logs (`~/Library/Caches`, `~/Library/Logs`)

@@ -192,3 +192,21 @@
 "Disk images and packages in Downloads and on the Desktop. Moved to the Trash; those older than 30 days are selected." = "Образы дисков и пакеты в «Загрузках» и на Рабочем столе. Перемещаются в Корзину; выбраны те, что старше 30 дней.";
 "Local backups of your devices; this may be the only copy of a device's data. Moved to the Trash; nothing is selected." = "Локальные бэкапы ваших устройств; это может быть единственная копия данных устройства. Перемещаются в Корзину; по умолчанию ничего не выбрано.";
 "Attachments Mail saved when you opened them; Mail downloads them again when needed. Deleted permanently." = "Вложения, которые Mail сохранил при открытии; при необходимости Mail скачает их снова. Удаляются навсегда.";
+
+// Leftovers of removed apps
+"No installed app uses this bundle identifier." = "Ни одно установленное приложение не использует этот bundle identifier.";
+"Background service whose program no longer exists." = "Фоновая служба, программы которой больше нет.";
+"Leftovers moved to Trash" = "Остатки перемещены в Корзину";
+"Some leftovers moved to Trash" = "Часть остатков перемещена в Корзину";
+"Moving leftovers to Trash stopped" = "Перемещение остатков в Корзину остановлено";
+"Leftovers were not moved to Trash" = "Остатки не перемещены в Корзину";
+"Find Leftovers of Removed Apps…" = "Найти остатки удалённых приложений…";
+"Look for files that apps you already deleted left in your Library." = "Найти файлы, которые уже удалённые приложения оставили в вашей папке Library.";
+"Looking for leftovers of removed apps…" = "Поиск остатков удалённых приложений…";
+"No leftovers of removed apps found" = "Остатков удалённых приложений не найдено";
+"Nothing in your Library belongs to an app that is no longer installed." = "В вашей папке Library нет ничего от приложений, которые больше не установлены.";
+"Nothing in your Library belongs to an app that is no longer installed. Containers were not checked without Full Disk Access." = "В вашей папке Library нет ничего от приложений, которые больше не установлены. Без полного доступа к диску контейнеры не проверялись.";
+"Back" = "Назад";
+"Leftovers of removed apps" = "Остатки удалённых приложений";
+"Apps that are no longer installed left these items. Review them: nothing is selected." = "Эти объекты оставили приложения, которых больше нет. Проверьте их: по умолчанию ничего не выбрано.";
+"Containers were not checked without Full Disk Access." = "Без полного доступа к диску контейнеры не проверялись.";

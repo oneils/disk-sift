@@ -93,9 +93,9 @@
 - Create: `Sources/SiftCore/Leftovers/OrphanScanner.swift`
 - Create: `Tests/SiftCoreTests/OrphanScannerTests.swift`
 
-- [ ] add `OrphanScanner.candidateID(fromName:inByHost:)` with extension stripping, ByHost UUID stripping, shape check, lowercasing, `com.apple`, Team-ID-prefix and `excludedPrefixes` filters
-- [ ] write tests: `com.foo.app.plist` → `com.foo.app`; `com.foo.app.savedState`; ByHost `com.foo.app.0A1B2C3D-....plist` and legacy MAC suffix; the `ByHost` folder name itself rejected; two-component and space/odd-character names rejected; `com.apple.*`, `ABCDE12345.com.foo.shared` and excluded prefixes rejected (case-insensitive); `com.Foo.App` → `com.foo.app`
-- [ ] run `make test` - must pass before task 2
+- [x] add `OrphanScanner.candidateID(fromName:inByHost:)` with extension stripping, ByHost UUID stripping, shape check, lowercasing, `com.apple`, Team-ID-prefix and `excludedPrefixes` filters
+- [x] write tests: `com.foo.app.plist` → `com.foo.app`; `com.foo.app.savedState`; ByHost `com.foo.app.0A1B2C3D-....plist` and legacy MAC suffix; the `ByHost` folder name itself rejected; two-component and space/odd-character names rejected; `com.apple.*`, `ABCDE12345.com.foo.shared` and excluded prefixes rejected (case-insensitive); `com.Foo.App` → `com.foo.app`
+- [x] run `make test` - must pass before task 2
 
 ### Task 2: Ownership lookups
 
@@ -107,12 +107,13 @@
 - Create: `Tests/SiftCoreTests/InstalledBundleIDsTests.swift`
 - Modify: any other `InstalledApps` conformers / fakes (e.g. `Tests/DiskSiftTests`) so they compile
 
-- [ ] add `isKnownOutsideTrash(bundleID:)` to `InstalledApps`; live version ignores URLs inside `~/.Trash` and `/.Trashes`; extract the Trash check into a pure function so it is unit-testable
-- [ ] add `InstalledBundleIDs.collect(paths:)`: apps in Applications and user Applications (plus one subfolder level); recursive, depth-bounded walk of each `Contents`, symlinks not followed, every nested bundle's `CFBundleIdentifier`, lowercased; unreadable or broken bundles skipped
-- [ ] update `FakeInstalledApps` with a `knownOutsideTrash` set
-- [ ] write tests: apps at top level and in a subfolder; nested IDs from `Contents/Frameworks/X.framework/.../Helper.app`, `Contents/Library/SystemExtensions/x.systemextension`, `Contents/PlugIns/A.appex/Contents/PlugIns/B.appex` included, including IDs that don't extend the app's; app without a bundle ID or with a broken plist skipped; symlinked bundle not followed; missing folders give an empty set
-- [ ] write tests: Trash check: `~/.Trash/Foo.app` and `/Volumes/X/.Trashes/501/Foo.app` are in the Trash, `/Applications/Foo.app` is not
-- [ ] run `make test` - must pass before task 3
+- [x] add `isKnownOutsideTrash(bundleID:)` to `InstalledApps`; live version ignores URLs inside `~/.Trash` and `/.Trashes`; extract the Trash check into a pure function so it is unit-testable
+- [x] add `InstalledBundleIDs.collect(paths:)`: apps in Applications and user Applications (plus one subfolder level); recursive, depth-bounded walk of each `Contents`, symlinks not followed, every nested bundle's `CFBundleIdentifier`, lowercased; unreadable or broken bundles skipped
+- [x] ➕ depth bound is 8 (Electron helpers sit ~5 levels into `Contents`); a symlinked `.app` at the Applications top level is followed and counted as installed (conservative), symlinks inside bundles are not
+- [x] update `FakeInstalledApps` with a `knownOutsideTrash` set
+- [x] write tests: apps at top level and in a subfolder; nested IDs from `Contents/Frameworks/X.framework/.../Helper.app`, `Contents/Library/SystemExtensions/x.systemextension`, `Contents/PlugIns/A.appex/Contents/PlugIns/B.appex` included, including IDs that don't extend the app's; app without a bundle ID or with a broken plist skipped; symlinked bundle not followed; missing folders give an empty set
+- [x] write tests: Trash check: `~/.Trash/Foo.app` and `/Volumes/X/.Trashes/501/Foo.app` are in the Trash, `/Applications/Foo.app` is not
+- [x] run `make test` - must pass before task 3
 
 ### Task 3: Library scan, launch agents and grouping
 
@@ -123,12 +124,12 @@
 - Modify: `Resources/en.lproj/Localizable.strings`, `Resources/ru.lproj/Localizable.strings` (the two evidence strings)
 - Modify: `Tests/SiftCoreTests/OrphanScannerTests.swift`
 
-- [ ] add `MatchEvidence.appNotInstalled`, `.launchProgramMissing` with their `explanationKey` cases and en + ru strings, `FindingSource.orphan(groupID:)`, `OrphanGroup`
-- [ ] implement `scan()`: user Library subdirs (minus Group Containers, LaunchAgents, and Containers without FDA) → candidates → ownership filter (Launch Services outside Trash, installed/running/live-agent IDs with equal, extends and ancestor rules) → findings with `requiresRoot` via `Writability.canRemove(.trash)`; launch agents with missing programs inside the Applications folders whose label is not alive; grouping by shortest orphan prefix (lowercase); sizing; cancellation
-- [ ] write tests (temp tree + fakes): orphan prefs/caches/support/saved state of `com.gone.app` grouped together with `com.gone.app.helper` and differently cased `com.Gone.App`; installed app's and nested helper's data ignored (incl. a non-prefixed `.appex` container); extension of an installed ID ignored; ancestor of an installed ID (`com.foo.app` with `com.foo.app.pro` installed) ignored; ID known only as an app in the Trash **is** reported; Launch Services–known ID ignored; running ID ignored; a live agent's label protects its Application Support folder; `/Library` and Group Containers not scanned; Containers skipped without FDA and scanned with it
-- [ ] write tests: agent with missing program inside Applications → orphan with `.launchProgramMissing` and `.launchItem(label:, .user)`, also when the temp root goes through a symlink; agent whose program exists or is outside Applications → ignored; missing-program agent whose label belongs to an installed app → ignored; unreadable plist skipped; agent joins the matching group
-- [ ] write tests: every orphan finding is allowed by `RemovalRoots.make`; cancellation stops the scan
-- [ ] run `make test` - must pass before task 4
+- [x] add `MatchEvidence.appNotInstalled`, `.launchProgramMissing` with their `explanationKey` cases and en + ru strings, `FindingSource.orphan(groupID:)`, `OrphanGroup`
+- [x] implement `scan()`: user Library subdirs (minus Group Containers, LaunchAgents, and Containers without FDA) → candidates → ownership filter (Launch Services outside Trash, installed/running/live-agent IDs with equal, extends and ancestor rules) → findings with `requiresRoot` via `Writability.canRemove(.trash)`; launch agents with missing programs inside the Applications folders whose label is not alive; grouping by shortest orphan prefix (lowercase); sizing; cancellation
+- [x] write tests (temp tree + fakes): orphan prefs/caches/support/saved state of `com.gone.app` grouped together with `com.gone.app.helper` and differently cased `com.Gone.App`; installed app's and nested helper's data ignored (incl. a non-prefixed `.appex` container); extension of an installed ID ignored; ancestor of an installed ID (`com.foo.app` with `com.foo.app.pro` installed) ignored; ID known only as an app in the Trash **is** reported; Launch Services–known ID ignored; running ID ignored; a live agent's label protects its Application Support folder; `/Library` and Group Containers not scanned; Containers skipped without FDA and scanned with it
+- [x] write tests: agent with missing program inside Applications → orphan with `.launchProgramMissing` and `.launchItem(label:, .user)`, also when the temp root goes through a symlink; agent whose program exists or is outside Applications → ignored; missing-program agent whose label belongs to an installed app → ignored; unreadable plist skipped; agent joins the matching group
+- [x] write tests: every orphan finding is allowed by `RemovalRoots.make`; cancellation stops the scan
+- [x] run `make test` - must pass before task 4
 
 ### Task 4: `OrphanRemover` and shared agent unloading
 
@@ -138,11 +139,11 @@
 - Modify: `Sources/SiftCore/Removal/Uninstaller.swift`
 - Create: `Tests/SiftCoreTests/OrphanRemoverTests.swift`
 
-- [ ] extract label collection + `launchctl bootout gui/<uid>/<label>` from `Uninstaller` into `LaunchAgentUnloader` (internal), keep `Uninstaller` behavior identical
-- [ ] add `OrphanRemover(remover:runner:uid:)`: unload labels of selected `.launchItem(_, .user)` findings (failures logged, not fatal; cancellation checked), then `.trash` removal with progress
-- [ ] write tests (`FakeCommandRunner`, fake trasher, temp tree): bootout runs once per label before any item is trashed; a failing bootout doesn't block removal; only `.trash` is used; stop before and during removal
-- [ ] existing `UninstallerTests` pass unchanged
-- [ ] run `make test` - must pass before task 5
+- [x] extract label collection + `launchctl bootout gui/<uid>/<label>` from `Uninstaller` into `LaunchAgentUnloader` (internal), keep `Uninstaller` behavior identical
+- [x] add `OrphanRemover(remover:runner:uid:)`: unload labels of selected `.launchItem(_, .user)` findings (failures logged, not fatal; cancellation checked), then `.trash` removal with progress
+- [x] write tests (`FakeCommandRunner`, fake trasher, temp tree): bootout runs once per label before any item is trashed; a failing bootout doesn't block removal; only `.trash` is used; stop before and during removal
+- [x] existing `UninstallerTests` pass unchanged
+- [x] run `make test` - must pass before task 5
 
 ### Task 5: `OrphansModel`
 
@@ -152,12 +153,12 @@
 - Create: `Tests/DiskSiftTests/OrphansModelTests.swift`
 - Modify: `Tests/DiskSiftTests/ReportOutcomeTests.swift`
 
-- [ ] implement `OrphanScanning` / `OrphanRemoving` seams and conformances, `live(paths:)`, phases, `groups`, empty default selection, root-only findings not selectable, per-finding and per-group selection with tri-state, `ResultSort` over groups, `selectedTotal`, reveal/`missingItem`, scan with stop
-- [ ] implement `remove()` through `OrphanRemoving` with progress, stop after current item, prune and report
-- [ ] add `ReportContext.leftovers` titles
-- [ ] write tests (private fakes): nothing selected after scan; root-only finding can't be selected and doesn't affect group tri-state; group tri-state on/mixed/off; sort keeps selection; only selected findings reach the remover
-- [ ] write tests: stop during scan and after the current item; report prunes removed findings and empty groups; missing item; `.leftovers` titles never say "Uninstall"
-- [ ] run `make test` - must pass before task 6
+- [x] implement `OrphanScanning` / `OrphanRemoving` seams and conformances, `live(paths:)`, phases, `groups`, empty default selection, root-only findings not selectable, per-finding and per-group selection with tri-state, `ResultSort` over groups, `selectedTotal`, reveal/`missingItem`, scan with stop
+- [x] implement `remove()` through `OrphanRemoving` with progress, stop after current item, prune and report
+- [x] add `ReportContext.leftovers` titles
+- [x] write tests (private fakes): nothing selected after scan; root-only finding can't be selected and doesn't affect group tri-state; group tri-state on/mixed/off; sort keeps selection; only selected findings reach the remover
+- [x] write tests: stop during scan and after the current item; report prunes removed findings and empty groups; missing item; `.leftovers` titles never say "Uninstall"
+- [x] run `make test` - must pass before task 6
 
 ### Task 6: Orphans view and entry point in the Uninstall tab
 
@@ -168,22 +169,23 @@
 - Modify: `Resources/en.lproj/Localizable.strings`, `Localizable.stringsdict`
 - Modify: `Resources/ru.lproj/Localizable.strings`, `Localizable.stringsdict`
 
-- [ ] `ShellModel.orphans`; Uninstall detail shows `OrphansView` while `orphans.phase != .idle`
-- [ ] chooser: secondary "Find Leftovers of Removed Apps…" button
-- [ ] `OrphansView`: scanning header with Stop; results header (count/total, sort, Scan Again, Back); grouped list with tri-state group headers and finding rows; footer with Move to Trash; removal progress; empty state with the FDA note; `ReportSheet(context: .leftovers)`
-- [ ] all new en + ru strings; counts ("%lld items") as `stringsdict` plural entries with Russian one/few/many/other
-- [ ] run `make test` and `make lint` - must pass before task 7
+- [x] `ShellModel.orphans`; Uninstall detail shows `OrphansView` while `orphans.phase != .idle`
+- [x] chooser: secondary "Find Leftovers of Removed Apps…" button
+- [x] `OrphansView`: scanning header with Stop; results header (count/total, sort, Scan Again, Back); grouped list with tri-state group headers and finding rows; footer with Move to Trash; removal progress; empty state with the FDA note; `ReportSheet(context: .leftovers)`
+- [x] all new en + ru strings; counts reuse the existing `%lld items` stringsdict entry (Russian one/few/many/other already there), so no new stringsdict keys were needed
+- [x] ➕ checked the start screen and results by rendering them from a temporary demo tree (hook not committed)
+- [x] run `make test` and `make lint` - must pass before task 7
 
 ### Task 7: Verify acceptance criteria
-- [ ] orphans are found only in `~/Library` (no `/Library`, no Group Containers, no Containers without FDA); installed (incl. deeply nested), ancestor, Launch Services–known (outside Trash), running and live-agent IDs are never reported; apps sitting in the Trash don't hide their leftovers
-- [ ] nothing is preselected, root-only items are not selectable; removal is Trash only via `RemovalRoots.make`; agents are unloaded first
-- [ ] run full test suite: `make test`
-- [ ] run `make lint`, `make app`, `make check-app`
+- [x] orphans are found only in `~/Library` (no `/Library`, no Group Containers, no Containers without FDA); installed (incl. deeply nested), ancestor, Launch Services–known (outside Trash), running and live-agent IDs are never reported; apps sitting in the Trash don't hide their leftovers
+- [x] nothing is preselected, root-only items are not selectable; removal is Trash only via `RemovalRoots.make`; agents are unloaded first
+- [x] run full test suite: `make test`
+- [x] run `make lint`, `make app`, `make check-app`
 
 ### Task 8: [Final] Update documentation
-- [ ] README "What it does": leftovers of removed apps under the Uninstall section
-- [ ] CLAUDE.md layout if new files warrant it
-- [ ] move this plan to `docs/plans/completed/`
+- [x] README "What it does": leftovers of removed apps under the Uninstall section
+- [x] CLAUDE.md layout if new files warrant it
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 *Items requiring manual intervention or external systems - no checkboxes, informational only*
