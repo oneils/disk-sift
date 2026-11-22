@@ -1,19 +1,37 @@
-# disk-sift
+<p align="center">
+  <img src="docs/images/icon.png" width="128" height="128" alt="DiskSift icon">
+</p>
 
-A small native macOS app that uninstalls apps without leaving junk behind and cleans up caches you don't need.
+<h1 align="center">DiskSift</h1>
 
-> **Status:** v1 is feature complete. Download a build from [Releases](../../releases) or build it yourself. The design and implementation plan are in [`docs/plans/20261122-disk-sift-v1.md`](docs/plans/20261122-disk-sift-v1.md).
+<p align="center">
+  A small native macOS app that uninstalls apps without leaving junk behind, cleans up caches and other junk, and finds large files you forgot about.
+</p>
+
+<p align="center">
+  <a href="../../releases/latest">Download the latest release</a> · macOS 14 or later · Apple silicon and Intel · English and Russian
+</p>
+
+![Uninstalling an app: the app and its leftovers grouped by location, with why each one matched](docs/images/uninstall.png)
+
+| Junk | Large files |
+|---|---|
+| ![Junk scan: found space by category, developer caches and installers](docs/images/junk.png) | ![Large files in the home folder with last-opened dates](docs/images/large-files.png) |
+
+*Screenshots use a demo home folder.*
+
+Design notes and implementation plans are in [`docs/plans/completed/`](docs/plans/completed/).
 
 ## What it does
 
-**Uninstall apps completely.** Drag an app from `/Applications` or `~/Applications` into the window. DiskSift reads its bundle ID, Team ID and bundled helpers, then looks for what the app left in your Library:
+**Uninstall apps completely.** Drag an app from `/Applications` or `~/Applications` into the window, or click **Choose Application…**. DiskSift reads its bundle ID, Team ID and bundled helpers, then looks for what the app left in your Library:
 
 - preferences, Application Support, caches, logs, saved state, HTTP storage, WebKit data, cookies
 - sandbox containers and group containers
 - launch agents and daemons that point into the app
 - files installed by the app's `.pkg` installer (from `pkgutil` receipts)
 
-Every finding shows its size and how sure DiskSift is that it belongs to the app. Matches by bundle ID are checked by default. Matches by app name only, and data the vendor's other apps share (for example Office's group container), are left unchecked for you to review. DiskSift unloads the app's launch agents, then moves the app and the checked leftovers to the Trash, so you can put anything back.
+Leftovers are grouped by location (Application Support, Caches, Preferences, Login Services and so on), and each one says why it matched and whether other apps may share it. The header shows the app's icon, version and size, plus the total that will go to the Trash. Every finding shows its size and how sure DiskSift is that it belongs to the app. Matches by bundle ID are checked by default. Matches by app name only, and data the vendor's other apps share (for example Office's group container), are left unchecked for you to review. DiskSift unloads the app's launch agents, then moves the app and the checked leftovers to the Trash, so you can put anything back.
 
 **Clean up junk.** One scan shows how much space these take:
 
@@ -27,6 +45,8 @@ User caches and logs start unchecked: pick what you want to delete. Developer ca
 
 **Find large files.** A third tab lists files of 100 MB, 500 MB, 1 GB or 5 GB and more anywhere in your home folder, with the date each was last opened (from Spotlight; otherwise the date it was modified). Nothing is selected by default. Files you select are moved to the Trash, never deleted. The scan skips `~/Library`, the Trash, `~/Applications`, apps and media libraries, Git folders and other volumes.
 
+Right-click any item for **Show in Finder** or **Copy Path**. When something can't be removed, the report says why and what to do next.
+
 Sizes are allocated sizes on disk. Because of APFS clones and local Time Machine snapshots, the space actually freed can be smaller.
 
 ## Safety
@@ -36,7 +56,7 @@ Sizes are allocated sizes on disk. Because of APFS clones and local Time Machine
 - Paths are resolved before the check, so a symlink can't lead it outside those folders. Symlinks are removed as links; their targets are never touched.
 - If the app itself can't be moved to the Trash, its leftovers are left alone.
 - Apple's own apps and anything under `/System` can't be uninstalled.
-- Items owned by root (for example in `/Library/LaunchDaemons`) are shown but not removed in v1. Apps installed as root are refused up front.
+- Items owned by root (for example in `/Library/LaunchDaemons`) are shown but never removed. Apps installed as root are refused up front.
 - If the app you drop is running, DiskSift asks to quit it first.
 
 ## Requirements
@@ -69,7 +89,7 @@ xattr -dr com.apple.quarantine /Applications/DiskSift.app
 
 or try to open the app once, then click **Open Anyway** in System Settings → Privacy & Security.
 
-## Not in v1
+## Not included
 
 Emptying the Trash, removing language files from apps (it breaks their code signature), removing root-owned items, a background agent that watches for deleted apps, and an App Store version (the App Store sandbox doesn't allow reading other apps' data).
 

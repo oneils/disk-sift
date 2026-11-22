@@ -300,7 +300,8 @@ private struct JunkItemRow: View {
 private struct DistributionBar: View {
     let model: JunkModel
 
-    private static let palette: [Color] = [.accentColor, .purple, .teal, .pink]
+    /// One distinct color per category (five today); the legend names each one, so color is never the only cue.
+    private static let palette: [Color] = [.accentColor, .purple, .teal, .pink, .orange, .green]
 
     private var parts: [(row: JunkModel.Row, color: Color)] {
         model.rows.enumerated().filter { $0.element.total > 0 }
