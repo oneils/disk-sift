@@ -17,6 +17,11 @@ enum Section: String, CaseIterable, Identifiable {
 final class ShellModel {
     var selection: Section? = .uninstall
     var fdaGranted = true
+    let uninstall: UninstallModel
+
+    init(uninstall: UninstallModel = .live()) {
+        self.uninstall = uninstall
+    }
 
     func refreshFDA() {
         fdaGranted = FullDiskAccess.isGranted(.live)
@@ -35,9 +40,12 @@ struct ContentView: View {
         } detail: {
             VStack(spacing: 0) {
                 if !model.fdaGranted { FDABanner() }
-                // screens are added in later tasks
-                Text(LocalizedStringKey((model.selection ?? .uninstall).rawValue))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                switch model.selection ?? .uninstall {
+                case .uninstall:
+                    UninstallView(model: model.uninstall)
+                case .junk:
+                    Text("Junk").frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
         .frame(minWidth: 640, minHeight: 420)
