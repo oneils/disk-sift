@@ -45,8 +45,23 @@
 "Delete…" = "Удалить…";
 "Files are deleted immediately, not moved to the Trash. On APFS the free space may take a while to show up because of local snapshots." = "Файлы удаляются сразу, а не перемещаются в Корзину. На APFS свободное место может обновиться не сразу из-за локальных снимков.";
 "Cleanup finished" = "Очистка завершена";
+"Cleanup stopped" = "Очистка остановлена";
+"Uninstall stopped" = "Удаление остановлено";
+"Deleting…" = "Удаление…";
+"Moving to Trash: %@" = "Перемещение в Корзину: %@";
+"%lld of %lld done • %@ moved to Trash" = "Готово %lld из %lld • Перемещено в Корзину: %@";
+"Stopped: %lld items not removed" = "Остановлено: не удалено элементов: %lld";
 "Scanning: %lld of %lld done" = "Сканирование: готово %lld из %lld";
 "Stop" = "Стоп";
 "Scan" = "Сканировать";
 "User caches and logs" = "Кэши и логи пользователя";
 "Developer caches" = "Кэши разработчика";
+
+// Removal progress and partial reports
+"Stop after current item" = "Остановить после текущего объекта";
+"Stopping after current item…" = "Остановка после текущего объекта…";
+"Stopping does not undo items already removed." = "Остановка не восстанавливает уже удалённые объекты.";
+"Moved to Trash: %lld items, %@" = "Перемещено в Корзину: %lld объектов, %@";
+"Deleted: %lld items, %@" = "Удалено: %lld объектов, %@";
+"Deleting: %@" = "Удаление: %@";
+"%lld of %lld done • %@ deleted" = "Готово %lld из %lld • Удалено: %@";

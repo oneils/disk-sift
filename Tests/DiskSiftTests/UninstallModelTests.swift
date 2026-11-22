@@ -18,7 +18,29 @@ private struct FakeScanner: LeftoverScanning {
 private final class FakeUninstaller: AppUninstalling {
     let calls = OSAllocatedUnfairLock<[[Finding]]>(initialState: [])
     let report: RemovalReport
-    init(report: RemovalReport = RemovalReport()) { self.report = report }
+    let pauseOnFirst: Bool
+    init(report: RemovalReport = RemovalReport(), pauseOnFirst: Bool = false) {
+        self.report = report
+        self.pauseOnFirst = pauseOnFirst
+    }
+    func uninstall(
+        _ app: AppInfo,
+        leftovers: [Finding],
+        onProgress: (@Sendable (RemovalProgressState) async -> Void)? = nil
+    ) async -> RemovalReport {
+        calls.withLock { $0.append(leftovers) }
+        await onProgress?(
+            RemovalProgressState(
+                current: Finding(url: app.url, confidence: .high, sources: []), completed: 0,
+                total: 1 + leftovers.count, processedBytes: 0))
+        if pauseOnFirst {
+            while !Task.isCancelled { await Task.yield() }
+            if Task.isCancelled {
+                return RemovalReport(unprocessed: leftovers, stopped: true)
+            }
+        }
+        return report
+    }
     func uninstall(_ app: AppInfo, leftovers: [Finding]) async -> RemovalReport {
         calls.withLock { $0.append(leftovers) }
         return report
@@ -164,5 +186,32 @@ private final class FakeProcesses: RunningApps, ProcessTerminating {
         #expect(m.phase == .report(report))
         m.reset()
         #expect(m.phase == .idle)
+    }
+
+    @Test(.timeLimit(.minutes(1))) func trashStopCancelsAndLeavesRemaining() async {
+        let high = finding("/Users/u/Library/Caches/com.foo.app", .high)
+        let uninstaller = FakeUninstaller(pauseOnFirst: true)
+        let m = model(findings: [high], uninstaller: uninstaller)
+        await m.drop([appURL])
+        let task = Task { await m.trash() }
+        while m.removalProgress == nil { await Task.yield() }
+        #expect(m.phase == .removing)
+        #expect(m.removalProgress?.completed == 0)
+        #expect(!m.isStopping)
+        m.reset()
+        await m.drop([appURL])
+        await m.trash()
+        #expect(uninstaller.calls.withLock { $0.count } == 1)
+        #expect(m.phase == .removing)
+        m.stop()
+        #expect(m.isStopping)
+        await task.value
+        #expect(!m.isStopping)
+        guard case .report(let report) = m.phase else {
+            Issue.record("expected report after stop")
+            return
+        }
+        #expect(report.stopped)
+        #expect(m.removalProgress == nil)
     }
 }

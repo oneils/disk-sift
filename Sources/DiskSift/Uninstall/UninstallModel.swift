@@ -11,6 +11,11 @@ protocol LeftoverScanning: Sendable {
 }
 
 protocol AppUninstalling: Sendable {
+    func uninstall(
+        _ app: AppInfo,
+        leftovers: [Finding],
+        onProgress: (@Sendable (RemovalProgressState) async -> Void)?
+    ) async -> RemovalReport
     func uninstall(_ app: AppInfo, leftovers: [Finding]) async -> RemovalReport
 }
 
@@ -69,6 +74,9 @@ final class UninstallModel {
     private(set) var groups: [FindingGroup] = []
     private(set) var checked: Set<String> = []
     var isTargeted = false
+    private(set) var isStopping = false
+    private(set) var removalProgress: RemovalProgressState?
+    private var removalTask: Task<RemovalReport, Never>?
 
     private let validator: any AppValidating
     private let scanner: any LeftoverScanning
@@ -182,7 +190,7 @@ final class UninstallModel {
     func isChecked(_ finding: Finding) -> Bool { checked.contains(finding.id) }
 
     func setChecked(_ finding: Finding, _ on: Bool) {
-        guard !finding.requiresRoot else { return }
+        guard phase == .results, !finding.requiresRoot else { return }
         if on { checked.insert(finding.id) } else { checked.remove(finding.id) }
     }
 
@@ -198,11 +206,36 @@ final class UninstallModel {
     func trash() async {
         guard phase == .results, let app else { return }
         phase = .removing
-        let report = await uninstaller.uninstall(app, leftovers: selectedFindings)
+        isStopping = false
+        removalProgress = nil
+        let uninstaller = uninstaller
+        let leftovers = selectedFindings
+        let task = Task.detached {
+            await uninstaller.uninstall(app, leftovers: leftovers) { state in
+                await MainActor.run {
+                    self.removalProgress = state
+                }
+            }
+        }
+        removalTask = task
+        let report = await task.value
+        isStopping = false
+        removalTask = nil
+        removalProgress = nil
         phase = .report(report)
     }
 
+    func stop() {
+        guard phase == .removing else { return }
+        isStopping = true
+        removalTask?.cancel()
+    }
+
     func reset() {
+        guard phase != .removing else { return }
+        removalTask?.cancel()
+        removalTask = nil
+        removalProgress = nil
         phase = .idle
         app = nil
         groups = []

@@ -27,7 +27,12 @@ struct UninstallView: View {
             }
             .sheet(isPresented: reportBinding) {
                 if case .report(let report) = model.phase {
-                    ReportSheet(report: report, title: "Uninstall finished") { model.reset() }
+                    ReportSheet(
+                        report: report, policy: .trash,
+                        title: report.stopped ? "Uninstall stopped" : "Uninstall finished"
+                    ) {
+                        model.reset()
+                    }
                 }
             }
     }
@@ -58,9 +63,27 @@ struct UninstallView: View {
                 Text("Looking for leftovers…")
             }
         case .removing:
-            VStack(spacing: 8) {
+            VStack(spacing: 12) {
                 ProgressView()
-                Text("Moving to Trash…")
+                if let p = model.removalProgress {
+                    Text("Moving to Trash: \(p.current.url.lastPathComponent)")
+                        .font(.headline)
+                        .help(p.current.url.path)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Text("\(p.completed) of \(p.total) done • \(formatBytes(p.processedBytes)) moved to Trash")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Moving to Trash…")
+                        .font(.headline)
+                }
+                Button(
+                    LocalizedStringKey(model.isStopping ? "Stopping after current item…" : "Stop after current item")
+                ) {
+                    model.stop()
+                }
+                .disabled(model.isStopping)
+                .padding(.top, 4)
             }
         case .results:
             results
@@ -155,6 +178,7 @@ extension Confidence {
 
 struct ReportSheet: View {
     let report: RemovalReport
+    let policy: RemovalPolicy
     let title: String
     let onClose: () -> Void
 
@@ -163,7 +187,11 @@ struct ReportSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(LocalizedStringKey(title)).font(.title2)
-            Text("Removed: \(report.removed.count) items, \(formatBytes(removedBytes))")
+            if policy == .trash {
+                Text("Moved to Trash: \(report.removed.count) items, \(formatBytes(removedBytes))")
+            } else {
+                Text("Deleted: \(report.removed.count) items, \(formatBytes(removedBytes))")
+            }
             if !report.skipped.isEmpty {
                 Text("Skipped: \(report.skipped.count) items").foregroundStyle(.orange)
                 List(report.skipped, id: \.url) { item in
@@ -173,6 +201,14 @@ struct ReportSheet: View {
                     }
                 }
                 .frame(minHeight: 120)
+            }
+            if report.stopped && !report.unprocessed.isEmpty {
+                Text("Stopped: \(report.unprocessed.count) items not removed").foregroundStyle(.secondary)
+                Text("Stopping does not undo items already removed.").font(.caption).foregroundStyle(.secondary)
+                List(report.unprocessed) { item in
+                    Text(item.url.path).lineLimit(1).truncationMode(.middle).help(item.url.path)
+                }
+                .frame(minHeight: 100, maxHeight: 180)
             }
             HStack {
                 Spacer()

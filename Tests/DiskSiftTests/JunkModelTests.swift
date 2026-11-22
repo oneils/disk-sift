@@ -33,7 +33,44 @@ private struct FakeScanner: JunkScanning {
 private final class FakeRemover: FindingRemoving {
     let received = OSAllocatedUnfairLock<[[Finding]]>(initialState: [])
     let skipPath: String?
-    init(skipPath: String? = nil) { self.skipPath = skipPath }
+    let pauseOnFirst: Bool
+    init(skipPath: String? = nil, pauseOnFirst: Bool = false) {
+        self.skipPath = skipPath
+        self.pauseOnFirst = pauseOnFirst
+    }
+
+    func remove(
+        _ findings: [Finding],
+        policy: RemovalPolicy,
+        onProgress: (@Sendable (RemovalProgressState) async -> Void)? = nil
+    ) async -> RemovalReport {
+        received.withLock { $0.append(findings) }
+        var report = RemovalReport()
+        var processedBytes: Int64 = 0
+        for (index, finding) in findings.enumerated() {
+            if Task.isCancelled {
+                report.stopped = true
+                report.unprocessed = Array(findings[index...])
+                break
+            }
+            await onProgress?(
+                RemovalProgressState(
+                    current: finding, completed: index, total: findings.count, processedBytes: processedBytes))
+            if pauseOnFirst && index == 0 {
+                while !Task.isCancelled { await Task.yield() }
+            }
+            if finding.url.path == skipPath {
+                report.skipped.append(SkippedItem(url: finding.url, reason: .inUse))
+            } else {
+                report.removed.append(RemovedItem(url: finding.url, size: finding.size))
+                processedBytes += finding.size ?? 0
+            }
+        }
+        if Task.isCancelled && !report.stopped {
+            report.stopped = true
+        }
+        return report
+    }
 
     func remove(_ findings: [Finding], policy: RemovalPolicy) -> RemovalReport {
         received.withLock { $0.append(findings) }
@@ -288,5 +325,31 @@ private struct NoApps: RunningApps {
         #expect(big?.size == 65)
         #expect(m.children(of: "/c/big/g1").map(\.id) == ["/c/big/g1/y"])
         #expect(m.children(of: "/c/big").first { $0.id == "/c/big/g1" }?.size == 25)
+    }
+
+    @Test(.timeLimit(.minutes(1))) func deleteStopCancelsAndLeavesRemaining() async {
+        let remover = FakeRemover(pauseOnFirst: true)
+        let m = model(remover: remover)
+        await m.scan()
+        let task = Task { await m.delete() }
+        while m.deletingProgress == nil { await Task.yield() }
+        #expect(m.phase == .deleting)
+        #expect(m.deletingProgress?.completed == 0)
+        #expect(!m.isStopping)
+        m.startScan()
+        await m.delete()
+        #expect(remover.received.withLock { $0.count } == 1)
+        #expect(m.phase == .deleting)
+        m.stopDelete()
+        #expect(m.isStopping)
+        await task.value
+        #expect(!m.isStopping)
+        guard case .report(let report) = m.phase else {
+            Issue.record("expected report after stop")
+            return
+        }
+        #expect(report.stopped)
+        #expect(!report.unprocessed.isEmpty)
+        #expect(m.deletingProgress == nil)
     }
 }

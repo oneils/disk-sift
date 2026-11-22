@@ -22,6 +22,61 @@ public struct Remover: Sendable {
         return report
     }
 
+    public func remove(
+        _ findings: [Finding],
+        policy: RemovalPolicy,
+        onProgress: (@Sendable (RemovalProgressState) async -> Void)? = nil
+    ) async -> RemovalReport {
+        var report = RemovalReport()
+        var processedBytes: Int64 = 0
+        let total = findings.count
+
+        for (index, finding) in findings.enumerated() {
+            if Task.isCancelled {
+                report.stopped = true
+                report.unprocessed = Array(findings[index...])
+                break
+            }
+
+            let state = RemovalProgressState(
+                current: finding,
+                completed: index,
+                total: total,
+                processedBytes: processedBytes
+            )
+            await onProgress?(state)
+
+            switch removeOne(finding.url, policy: policy) {
+            case nil:
+                let size = finding.size
+                report.removed.append(RemovedItem(url: finding.url, size: size))
+                processedBytes += size ?? 0
+            case let reason?:
+                report.skipped.append(SkippedItem(url: finding.url, reason: reason))
+            }
+        }
+
+        return report
+    }
+
+    public func removeStream(
+        _ findings: [Finding],
+        policy: RemovalPolicy
+    ) -> AsyncStream<RemovalProgress> {
+        AsyncStream { continuation in
+            let task = Task {
+                let report = await self.remove(findings, policy: policy) { state in
+                    continuation.yield(.step(state))
+                }
+                continuation.yield(.completed(report: report))
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
+        }
+    }
+
     /// `nil` on success, otherwise why the item was skipped.
     private func removeOne(_ url: URL, policy: RemovalPolicy) -> SkipReason? {
         let canonical: CanonicalPath
