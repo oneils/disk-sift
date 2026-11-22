@@ -81,6 +81,7 @@ final class UninstallModel {
     /// Set when "Show in Finder" hit an item that no longer exists.
     var missingItem: URL?
     let paths: SiftPaths
+    private let locations: LocationKindResolver
     private(set) var isStopping = false
     private(set) var removalProgress: RemovalProgressState?
     private var removalTask: Task<RemovalReport, Never>?
@@ -104,6 +105,7 @@ final class UninstallModel {
         revealer: any FileRevealing = LiveFileRevealer()
     ) {
         self.paths = paths
+        locations = LocationKindResolver(paths: paths)
         self.sizer = sizer
         self.revealer = revealer
         self.validator = validator
@@ -246,7 +248,7 @@ final class UninstallModel {
         }
     }
 
-    func kind(of group: FindingGroup) -> LocationKind { LocationKind.of(group.parent, paths: paths) }
+    func kind(of group: FindingGroup) -> LocationKind { locations.kind(of: group.parent) }
 
     func isSystem(_ group: FindingGroup) -> Bool { LocationKind.isSystem(group.parent, paths: paths) }
 

@@ -17,18 +17,24 @@ public enum LocationKind: String, Sendable, CaseIterable {
     case other
 
     /// Kind of a scan directory (a `FindingGroup` parent). Unknown directories are `.other`.
+    /// Builds the lookup table on every call; use `LocationKindResolver` for many lookups.
     public static func of(_ directory: URL, paths: SiftPaths) -> LocationKind {
-        let path = directory.standardizedFileURL.path.lowercased()
+        LocationKindResolver(paths: paths).kind(of: directory)
+    }
+
+    /// Standardized, lowercased path of every scan directory with its kind.
+    static func table(_ paths: SiftPaths) -> [String: LocationKind] {
+        var table: [String: LocationKind] = [:]
         for (base, subdirs) in [
             (paths.library, ScanLocations.userLibrarySubdirs),
             (paths.systemLibrary, ScanLocations.systemLibrarySubdirs),
         ] {
-            for subdir in subdirs
-            where base.appendingPathComponent(subdir).standardizedFileURL.path.lowercased() == path {
-                return kind(ofSubdir: subdir)
+            for subdir in subdirs {
+                let key = base.appendingPathComponent(subdir).standardizedFileURL.path.lowercased()
+                if table[key] == nil { table[key] = kind(ofSubdir: subdir) }
             }
         }
-        return .other
+        return table
     }
 
     /// True for directories under `/Library` (shared by all users of the Mac).
@@ -63,5 +69,19 @@ extension SiftPaths {
         if path == home { return "~" }
         if path.hasPrefix(home + "/") { return "~" + path.dropFirst(home.count) }
         return path
+    }
+}
+
+/// `LocationKind.of` with the lookup table built once: one dictionary lookup per directory instead of
+/// building and standardizing every scan directory's URL (lists with thousands of rows call it per row).
+public struct LocationKindResolver: Sendable {
+    private let table: [String: LocationKind]
+
+    public init(paths: SiftPaths) {
+        table = LocationKind.table(paths)
+    }
+
+    public func kind(of directory: URL) -> LocationKind {
+        table[directory.standardizedFileURL.path.lowercased()] ?? .other
     }
 }

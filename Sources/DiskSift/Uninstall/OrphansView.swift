@@ -89,36 +89,26 @@ struct OrphansView: View {
             }
             .padding()
             Divider()
-            List {
-                ForEach(model.sortedGroups) { group in
-                    SwiftUI.Section {
-                        ForEach(group.findings) { finding in
-                            OrphanRow(model: model, finding: finding)
-                        }
-                    } header: {
-                        HStack(alignment: .firstTextBaseline) {
-                            TriStateCheckBox(state: model.groupState(group), name: group.id) {
-                                model.setGroup(group, $0)
+            // a lazy stack, not List: with thousands of self-sizing rows the AppKit table behind List
+            // stutters while scrolling, and only visible rows are built here
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    ForEach(model.sortedGroups) { section in
+                        SwiftUI.Section {
+                            ForEach(section.rows) { row in
+                                OrphanRow(model: model, row: row)
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 4)
+                                Divider().padding(.leading)
                             }
-                            .disabled(!model.hasSelectable(group))
-                            Text(verbatim: group.id).font(.headline)
-                            Text("\(group.findings.count) items").foregroundStyle(.secondary)
-                            Spacer()
-                            SizeText(group.totalSize)
+                        } header: {
+                            OrphanGroupHeader(model: model, section: section)
                         }
-                        .padding(.vertical, 2)
                     }
                 }
             }
             Divider()
-            HStack {
-                Text("Selected: \(formatBytes(model.selectedTotal))").font(.headline)
-                Spacer()
-                Button("Move to Trash") { Task { await model.remove() } }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(model.phase != .results || model.selectedFindings.isEmpty)
-            }
-            .padding()
+            OrphansFooter(model: model)
         }
     }
 
@@ -147,26 +137,61 @@ struct OrphansView: View {
     }
 }
 
-private struct OrphanRow: View {
-    @Bindable var model: OrphansModel
-    let finding: Finding
+/// Group header; reads only its own group's selection count.
+private struct OrphanGroupHeader: View {
+    let model: OrphansModel
+    let section: OrphanSection
 
     var body: some View {
-        let kind = LocationKind.of(finding.url.deletingLastPathComponent(), paths: model.paths)
+        HStack(alignment: .firstTextBaseline) {
+            TriStateCheckBox(state: model.groupState(section), name: section.id) { model.setGroup(section, $0) }
+                .disabled(section.selectableIDs.isEmpty)
+            Text(verbatim: section.id).font(.headline)
+            Text("\(section.rows.count) items").foregroundStyle(.secondary)
+            Spacer()
+            SizeText(section.totalSize)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 6)
+        .background(.bar)
+    }
+}
+
+/// Selected total and the action; the only part of the screen that depends on the whole selection.
+private struct OrphansFooter: View {
+    let model: OrphansModel
+
+    var body: some View {
+        HStack {
+            Text("Selected: \(formatBytes(model.selectedTotal))").font(.headline)
+            Spacer()
+            Button("Move to Trash") { Task { await model.remove() } }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.phase != .results || !model.hasSelection)
+        }
+        .padding()
+    }
+}
+
+private struct OrphanRow: View {
+    let model: OrphansModel
+    let row: OrphanRowData
+
+    var body: some View {
+        let finding = row.finding
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
-                Toggle(isOn: Binding(get: { model.isChecked(finding) }, set: { model.setChecked(finding, $0) })) {
-                    Text(verbatim: finding.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
+                Toggle(isOn: Binding(get: { model.isChecked(id: row.id) }, set: { model.setChecked(finding, $0) })) {
+                    Text(verbatim: row.name).lineLimit(1).truncationMode(.middle)
                 }
                 .disabled(finding.requiresRoot)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
-                        Text(LocalizedStringKey(kind.titleKey))
+                        Text(LocalizedStringKey(row.kindKey))
                         Text(verbatim: "·")
-                        Text(verbatim: model.paths.displayPath(finding.url.deletingLastPathComponent()))
-                            .lineLimit(1).truncationMode(.middle)
+                        Text(verbatim: row.parentPath).lineLimit(1).truncationMode(.middle)
                     }
-                    ForEach(finding.evidenceKeys, id: \.self) { Text(LocalizedStringKey($0)) }
+                    ForEach(row.evidenceKeys, id: \.self) { Text(LocalizedStringKey($0)) }
                     if finding.requiresRoot {
                         Text("Needs administrator rights; DiskSift will not remove it.")
                     }
@@ -178,9 +203,8 @@ private struct OrphanRow: View {
             Spacer()
             SizeText(finding.size)
         }
-        .padding(.vertical, 2)
         .opacity(finding.requiresRoot ? 0.6 : 1)
-        .help(finding.url.path)
+        .help(row.id)
         .contextMenu { RevealMenu(url: finding.url, reveal: { model.reveal($0) }) }
     }
 }
