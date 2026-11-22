@@ -18,3 +18,12 @@ struct FakeRunningApps: RunningApps {
         apps
     }
 }
+
+/// Last-used dates by path.
+struct FakeLastUsedLookup: LastUsedLookup {
+    var dates: [String: Date] = [:]
+
+    func lastUsed(_ url: URL) -> Date? {
+        dates[url.path]
+    }
+}

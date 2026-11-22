@@ -6,21 +6,21 @@ struct JunkView: View {
 
     var body: some View {
         content
-            .confirmationDialog(
-                Text("Delete \(formatBytes(model.selectedTotal)) permanently?"),
-                isPresented: $model.confirming, titleVisibility: .visible
-            ) {
-                Button("Delete", role: .destructive) { Task { await model.delete() } }
+            .confirmationDialog(confirmTitle, isPresented: $model.confirming, titleVisibility: .visible) {
+                if model.selectedDeleteTotal > 0 {
+                    Button("Delete", role: .destructive) { Task { await model.remove() } }
+                } else {
+                    Button("Move to Trash") { Task { await model.remove() } }
+                }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text(
-                    "Files are deleted immediately, not moved to the Trash. On APFS the free space may take a while to show up because of local snapshots."
-                )
+                confirmMessage
             }
             .sheet(isPresented: reportBinding) {
                 if case .report(let report) = model.phase {
                     ReportSheet(
-                        report: report, policy: .delete, paths: model.paths, reveal: { model.reveal($0) }
+                        report: report, context: .cleanup, paths: model.paths, reveal: { model.reveal($0) },
+                        removedByPolicy: model.lastRemoved
                     ) {
                         model.closeReport()
                     }
@@ -29,13 +29,38 @@ struct JunkView: View {
             .missingItemAlert($model.missingItem)
     }
 
+    private var confirmTitle: Text {
+        let delete = formatBytes(model.selectedDeleteTotal)
+        let trash = formatBytes(model.selectedTrashTotal)
+        switch (model.selectedDeleteTotal > 0, model.selectedTrashTotal > 0) {
+        case (true, true): return Text("Delete \(delete) permanently and move \(trash) to the Trash?")
+        case (false, true): return Text("Move \(trash) to the Trash?")
+        default: return Text("Delete \(delete) permanently?")
+        }
+    }
+
+    @ViewBuilder private var confirmMessage: some View {
+        switch (model.selectedDeleteTotal > 0, model.selectedTrashTotal > 0) {
+        case (true, true):
+            Text(
+                "Caches, logs and Mail downloads are deleted immediately. Installers and device backups are moved to the Trash, so you can put them back."
+            )
+        case (false, true):
+            Text("Items are moved to the Trash, so you can put them back.")
+        default:
+            Text(
+                "Files are deleted immediately, not moved to the Trash. On APFS the free space may take a while to show up because of local snapshots."
+            )
+        }
+    }
+
     @ViewBuilder private var content: some View {
         if !model.hasScanned {
             EmptyStateView(
                 symbol: "magnifyingglass",
                 title: "Find junk files",
                 message:
-                    "DiskSift checks your user caches and logs (~/Library/Caches, ~/Library/Logs) and developer caches: Xcode, CoreSimulator, Homebrew, npm, pip, Cargo and Go. System-wide caches are not scanned."
+                    "DiskSift checks your user caches and logs (~/Library/Caches, ~/Library/Logs), developer caches (Xcode, CoreSimulator, Homebrew, npm, pip, Cargo and Go), installers in Downloads and on the Desktop, local iPhone and iPad backups, and Mail downloads. System-wide caches are not scanned."
             ) {
                 Button("Start Scan") { model.startScan() }
                     .buttonStyle(.borderedProminent)
@@ -68,7 +93,7 @@ struct JunkView: View {
                         }
                     }
                 }
-                .disabled(model.phase == .deleting)
+                .disabled(model.phase == .removing)
                 Divider()
                 footer
             }
@@ -97,8 +122,8 @@ struct JunkView: View {
                     Spacer()
                     Button("Stop") { model.stop() }
                 }
-            case .deleting:
-                deletingHeader
+            case .removing:
+                removingHeader
             default:
                 summaryHeader
             }
@@ -130,21 +155,21 @@ struct JunkView: View {
         }
     }
 
-    private var deletingHeader: some View {
+    private var removingHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 ProgressView().controlSize(.small)
-                if let p = model.deletingProgress {
-                    Text("Deleting: \(p.current.url.lastPathComponent)")
+                if let p = model.removalProgress {
+                    Text("Removing: \(p.current.url.lastPathComponent)")
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .help(p.current.url.path)
                 } else {
-                    Text("Deleting…")
+                    Text("Removing…")
                 }
             }
-            if let p = model.deletingProgress {
-                Text("\(p.completed) of \(p.total) done • \(formatBytes(p.processedBytes)) deleted")
+            if let p = model.removalProgress {
+                Text("\(p.completed) of \(p.total) done • \(formatBytes(p.processedBytes)) removed")
                     .foregroundStyle(.secondary)
             }
             HStack {
@@ -153,7 +178,7 @@ struct JunkView: View {
                     LocalizedStringKey(
                         model.isStopping ? "Stopping after current item…" : "Stop after current item")
                 ) {
-                    model.stopDelete()
+                    model.stopRemove()
                 }
                 .disabled(model.isStopping)
             }
@@ -164,7 +189,7 @@ struct JunkView: View {
         HStack {
             Text("Selected: \(formatBytes(model.selectedTotal))").font(.headline)
             Spacer()
-            Button("Delete…") { model.requestDelete() }
+            Button("Clean Up…") { model.requestRemove() }
                 .buttonStyle(.borderedProminent)
                 .disabled(model.phase != .ready || model.selectedFindings.isEmpty)
         }
@@ -180,7 +205,7 @@ private struct CategoryLabel: View {
         let title = NSLocalizedString(row.title, comment: "")
         HStack(alignment: .firstTextBaseline) {
             TriStateCheckBox(state: model.categoryState(row), name: title) { model.setCategoryChecked(row, $0) }
-                .disabled(!model.hasSelectable(row) || model.phase == .deleting)
+                .disabled(!model.hasSelectable(row) || model.phase == .removing)
             Image(systemName: JunkCategoryInfo.symbol(row.id)).foregroundStyle(.secondary).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: title).font(.headline)
@@ -201,6 +226,9 @@ private struct CategoryLabel: View {
         case .scanning:
             ProgressView().controlSize(.small)
             SizeText(text: formatBytes(row.total))
+        case .noAccess:
+            Text("No access").foregroundStyle(.orange)
+                .help(Text("Grant Full Disk Access in System Settings, then scan again."))
         case .stopped:
             Text("Incomplete").foregroundStyle(.orange)
             SizeText(text: "≥ " + formatBytes(row.total))
@@ -234,12 +262,12 @@ private struct JunkItemRow: View {
 
     private var line: some View {
         HStack(alignment: .firstTextBaseline) {
-            TriStateCheckBox(state: model.state(of: node.id), name: node.url.lastPathComponent) { on in
+            TriStateCheckBox(state: model.state(of: node.id), name: node.title) { on in
                 model.setChecked(id: node.id, on)
             }
             .disabled(requiresRoot)
             VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: node.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
+                Text(verbatim: node.title).lineLimit(1).truncationMode(.middle)
                 if node.depth == 0 {
                     Text(verbatim: model.paths.displayPath(node.url))
                         .font(.caption).foregroundStyle(.secondary)
@@ -328,7 +356,13 @@ private struct DistributionBar: View {
 /// What deleting each junk category (and notable item) means.
 enum JunkCategoryInfo {
     static func symbol(_ categoryID: String) -> String {
-        categoryID == DevJunkCategory.categoryID ? "hammer" : "archivebox"
+        switch categoryID {
+        case DevJunkCategory.categoryID: "hammer"
+        case InstallersCategory.categoryID: "arrow.down.doc"
+        case IOSBackupsCategory.categoryID: "iphone"
+        case MailDownloadsCategory.categoryID: "envelope"
+        default: "archivebox"
+        }
     }
 
     static func noteKey(_ categoryID: String) -> String? {
@@ -337,6 +371,12 @@ enum JunkCategoryInfo {
             "Apps recreate caches as needed; the next launch may be slower. Nothing is selected by default."
         case DevJunkCategory.categoryID:
             "Build products and package caches; rebuilt or downloaded again when needed."
+        case InstallersCategory.categoryID:
+            "Disk images and packages in Downloads and on the Desktop. Moved to the Trash; those older than 30 days are selected."
+        case IOSBackupsCategory.categoryID:
+            "Local backups of your devices; this may be the only copy of a device's data. Moved to the Trash; nothing is selected."
+        case MailDownloadsCategory.categoryID:
+            "Attachments Mail saved when you opened them; Mail downloads them again when needed. Deleted permanently."
         default: nil
         }
     }

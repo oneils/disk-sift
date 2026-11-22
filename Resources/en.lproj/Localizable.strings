@@ -39,12 +39,10 @@
 "Left alone because the app could not be removed" = "Left alone because the app could not be removed";
 "Delete %@ permanently?" = "Delete %@ permanently?";
 "Delete" = "Delete";
-"Delete…" = "Delete…";
 "Files are deleted immediately, not moved to the Trash. On APFS the free space may take a while to show up because of local snapshots." = "Files are deleted immediately, not moved to the Trash. On APFS the free space may take a while to show up because of local snapshots.";
 "Cleanup finished" = "Cleanup finished";
 "Cleanup stopped" = "Cleanup stopped";
 "Uninstall stopped" = "Uninstall stopped";
-"Deleting…" = "Deleting…";
 "Moving to Trash: %@" = "Moving to Trash: %@";
 "%lld of %lld done • %@ moved to Trash" = "%lld of %lld done • %@ moved to Trash";
 "Stopped: %lld items not removed" = "Stopped: %lld items not removed";
@@ -58,8 +56,6 @@
 "Stopping after current item…" = "Stopping after current item…";
 "Stopping does not undo items already removed." = "Stopping does not undo items already removed.";
 "Moved to Trash: %lld items, %@" = "Moved to Trash: %lld items, %@";
-"Deleting: %@" = "Deleting: %@";
-"%lld of %lld done • %@ deleted" = "%lld of %lld done • %@ deleted";
 
 // Start states and choosing an app
 "Choose Application…" = "Choose Application…";
@@ -68,7 +64,6 @@
 "Choose an application to uninstall" = "Choose an application to uninstall";
 "or" = "or";
 "Find junk files" = "Find junk files";
-"DiskSift checks your user caches and logs (~/Library/Caches, ~/Library/Logs) and developer caches: Xcode, CoreSimulator, Homebrew, npm, pip, Cargo and Go. System-wide caches are not scanned." = "DiskSift checks your user caches and logs (~/Library/Caches, ~/Library/Logs) and developer caches: Xcode, CoreSimulator, Homebrew, npm, pip, Cargo and Go. System-wide caches are not scanned.";
 "Start Scan" = "Start Scan";
 "Scan Again" = "Scan Again";
 "No junk found" = "No junk found";
@@ -160,3 +155,40 @@
 "Permanent deletion is not allowed here" = "Permanent deletion is not allowed here";
 "Only files can be moved to the Trash from this list; use Finder for folders and links." = "Only files can be moved to the Trash from this list; use Finder for folders and links.";
 "Items from this list can only be moved to the Trash." = "Items from this list can only be moved to the Trash.";
+
+// Large Files tab
+"Files moved to Trash" = "Files moved to Trash";
+"Some files moved to Trash" = "Some files moved to Trash";
+"Moving to Trash stopped" = "Moving to Trash stopped";
+"Files were not moved to Trash" = "Files were not moved to Trash";
+"Large Files" = "Large Files";
+"Find large files" = "Find large files";
+"DiskSift looks for large files in your home folder. It skips ~/Library, the Trash, ~/Applications, apps and media libraries, Git folders and other volumes. Files you select are moved to the Trash, never deleted." = "DiskSift looks for large files in your home folder. It skips ~/Library, the Trash, ~/Applications, apps and media libraries, Git folders and other volumes. Files you select are moved to the Trash, never deleted.";
+"Files over" = "Files over";
+"Scanning: %lld items checked" = "Scanning: %lld items checked";
+"Found %lld files, %@" = "Found %lld files, %@";
+"Date" = "Date";
+"The scan was stopped. The list is incomplete." = "The scan was stopped. The list is incomplete.";
+"%lld folders could not be read and were not scanned." = "%lld folders could not be read and were not scanned.";
+"No files over %@ were found." = "No files over %@ were found.";
+"Opened %@" = "Opened %@";
+"Modified %@" = "Modified %@";
+
+// System junk
+"No access" = "No access";
+"Grant Full Disk Access in System Settings, then scan again." = "Grant Full Disk Access in System Settings, then scan again.";
+"Installers" = "Installers";
+"iPhone and iPad backups" = "iPhone and iPad backups";
+"Mail downloads" = "Mail downloads";
+"Delete %@ permanently and move %@ to the Trash?" = "Delete %@ permanently and move %@ to the Trash?";
+"Move %@ to the Trash?" = "Move %@ to the Trash?";
+"Caches, logs and Mail downloads are deleted immediately. Installers and device backups are moved to the Trash, so you can put them back." = "Caches, logs and Mail downloads are deleted immediately. Installers and device backups are moved to the Trash, so you can put them back.";
+"Items are moved to the Trash, so you can put them back." = "Items are moved to the Trash, so you can put them back.";
+"DiskSift checks your user caches and logs (~/Library/Caches, ~/Library/Logs), developer caches (Xcode, CoreSimulator, Homebrew, npm, pip, Cargo and Go), installers in Downloads and on the Desktop, local iPhone and iPad backups, and Mail downloads. System-wide caches are not scanned." = "DiskSift checks your user caches and logs (~/Library/Caches, ~/Library/Logs), developer caches (Xcode, CoreSimulator, Homebrew, npm, pip, Cargo and Go), installers in Downloads and on the Desktop, local iPhone and iPad backups, and Mail downloads. System-wide caches are not scanned.";
+"Removing: %@" = "Removing: %@";
+"Removing…" = "Removing…";
+"%lld of %lld done • %@ removed" = "%lld of %lld done • %@ removed";
+"Clean Up…" = "Clean Up…";
+"Disk images and packages in Downloads and on the Desktop. Moved to the Trash; those older than 30 days are selected." = "Disk images and packages in Downloads and on the Desktop. Moved to the Trash; those older than 30 days are selected.";
+"Local backups of your devices; this may be the only copy of a device's data. Moved to the Trash; nothing is selected." = "Local backups of your devices; this may be the only copy of a device's data. Moved to the Trash; nothing is selected.";
+"Attachments Mail saved when you opened them; Mail downloads them again when needed. Deleted permanently." = "Attachments Mail saved when you opened them; Mail downloads them again when needed. Deleted permanently.";

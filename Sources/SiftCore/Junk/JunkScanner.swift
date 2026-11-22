@@ -4,6 +4,8 @@ public enum JunkProgress: Sendable {
     case categoryStarted(id: String)
     case findingSized(categoryID: String, finding: Finding)
     case categoryFinished(id: String)
+    /// The category's location exists but can't be read; no `categoryFinished` follows.
+    case categoryUnreadable(id: String)
 }
 
 /// Scans junk categories in parallel and reports progress as a stream.
@@ -37,6 +39,9 @@ public struct JunkScanner: Sendable {
                                     continuation.yield(.findingSized(categoryID: category.id, finding: finding))
                                 }
                             } catch is CancellationError {
+                                return
+                            } catch JunkCategoryError.unreadable {
+                                continuation.yield(.categoryUnreadable(id: category.id))
                                 return
                             } catch {
                                 Log.scan.error(

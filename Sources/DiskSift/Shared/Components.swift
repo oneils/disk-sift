@@ -123,14 +123,17 @@ struct EmptyStateView<Actions: View>: View {
 
 struct ReportSheet: View {
     let report: RemovalReport
-    let policy: RemovalPolicy
+    let context: ReportContext
     let paths: SiftPaths
     let reveal: (URL) -> Void
+    /// Removed items per policy when one operation both deleted and trashed (Junk); nil means all
+    /// items followed the context's policy.
+    var removedByPolicy: [RemovalPolicy: [RemovedItem]]? = nil
     let onClose: () -> Void
 
-    private var outcome: ReportOutcome { ReportOutcome(report, policy: policy) }
+    private var outcome: ReportOutcome { ReportOutcome(report) }
 
-    private var removedBytes: Int64 { report.removed.reduce(0) { $0 + ($1.size ?? 0) } }
+    private var policy: RemovalPolicy { context.policy }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -140,7 +143,7 @@ struct ReportSheet: View {
                     .foregroundStyle(symbolColor)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(LocalizedStringKey(outcome.titleKey(policy: policy))).font(.title2)
+                    Text(LocalizedStringKey(outcome.titleKey(context: context))).font(.title2)
                     amountLine.font(.headline)
                 }
             }
@@ -192,19 +195,42 @@ struct ReportSheet: View {
         }
     }
 
+    /// Removed items for `policy`: from the per-policy split when given, else all or nothing.
+    func removed(_ policy: RemovalPolicy) -> [RemovedItem] {
+        if let removedByPolicy { return removedByPolicy[policy] ?? [] }
+        return policy == self.policy ? report.removed : []
+    }
+
+    private func bytes(_ items: [RemovedItem]) -> Int64 { items.reduce(0) { $0 + ($1.size ?? 0) } }
+
+    /// Policies to describe: those that removed something, or the context's own when nothing was removed.
+    var shownPolicies: [RemovalPolicy] {
+        let used = [RemovalPolicy.delete, .trash].filter { !removed($0).isEmpty }
+        return used.isEmpty ? [policy] : used
+    }
+
     @ViewBuilder private var amountLine: some View {
-        if policy == .trash {
-            Text("Moved to Trash: \(report.removed.count) items, \(formatBytes(removedBytes))")
-        } else {
-            Text("Deleted files totaling \(formatBytes(removedBytes)) (\(report.removed.count) items)")
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(shownPolicies, id: \.self) { policy in
+                let items = removed(policy)
+                if policy == .trash {
+                    Text("Moved to Trash: \(items.count) items, \(formatBytes(bytes(items)))")
+                } else {
+                    Text("Deleted files totaling \(formatBytes(bytes(items))) (\(items.count) items)")
+                }
+            }
         }
     }
 
     @ViewBuilder private var noteLine: some View {
-        if policy == .trash {
-            Text("Disk space is freed when you empty the Trash.")
-        } else {
-            Text("Free space may take a while to update because of APFS local snapshots.")
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(shownPolicies, id: \.self) { policy in
+                if policy == .trash {
+                    Text("Disk space is freed when you empty the Trash.")
+                } else {
+                    Text("Free space may take a while to update because of APFS local snapshots.")
+                }
+            }
         }
     }
 }

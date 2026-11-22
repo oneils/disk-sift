@@ -11,7 +11,7 @@ public struct DevJunkCategory: JunkCategory {
 
     public func scan(paths: SiftPaths) async throws -> [Finding] {
         try Task.checkCancellation()
-        return Self.paths(paths).compactMap { JunkSupport.finding($0, categoryID: id, paths: paths) }
+        return Self.paths(paths).compactMap { JunkSupport.finding($0, categoryID: id, policy: policy, paths: paths) }
     }
 
     /// Xcode Archives hold dSYMs, so they stay unchecked.

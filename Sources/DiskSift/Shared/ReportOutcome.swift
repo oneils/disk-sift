@@ -1,5 +1,15 @@
 import SiftCore
 
+/// Which action a report describes; decides its wording, independent of how items were removed.
+enum ReportContext: Equatable {
+    case uninstall
+    case cleanup
+    case largeFiles
+
+    /// How items of this action are removed (amount and note lines follow it).
+    var policy: RemovalPolicy { self == .cleanup ? .delete : .trash }
+}
+
 /// How a removal ended, for the report headline and symbol.
 enum ReportOutcome: Equatable {
     /// Everything requested was removed.
@@ -11,8 +21,9 @@ enum ReportOutcome: Equatable {
     /// Nothing was removed (or, for an uninstall, the app itself could not be moved).
     case failed
 
-    init(_ report: RemovalReport, policy: RemovalPolicy) {
-        let appFailed = policy == .trash && report.skipped.contains { $0.reason == .appNotRemoved }
+    init(_ report: RemovalReport) {
+        // only an uninstall produces appNotRemoved: the app itself stayed, so the action failed
+        let appFailed = report.skipped.contains { $0.reason == .appNotRemoved }
         if report.stopped && !report.unprocessed.isEmpty {
             self = .stopped
         } else if appFailed || (report.removed.isEmpty && !report.skipped.isEmpty) {
@@ -25,16 +36,20 @@ enum ReportOutcome: Equatable {
     }
 
     /// English localization key of the sheet title.
-    func titleKey(policy: RemovalPolicy) -> String {
-        switch (self, policy) {
-        case (.success, .trash): "Uninstall finished"
-        case (.partial, .trash): "Uninstall partly finished"
-        case (.stopped, .trash): "Uninstall stopped"
-        case (.failed, .trash): "Uninstall failed"
-        case (.success, .delete): "Cleanup finished"
-        case (.partial, .delete): "Cleanup partly finished"
-        case (.stopped, .delete): "Cleanup stopped"
-        case (.failed, .delete): "Cleanup failed"
+    func titleKey(context: ReportContext) -> String {
+        switch (self, context) {
+        case (.success, .uninstall): "Uninstall finished"
+        case (.partial, .uninstall): "Uninstall partly finished"
+        case (.stopped, .uninstall): "Uninstall stopped"
+        case (.failed, .uninstall): "Uninstall failed"
+        case (.success, .cleanup): "Cleanup finished"
+        case (.partial, .cleanup): "Cleanup partly finished"
+        case (.stopped, .cleanup): "Cleanup stopped"
+        case (.failed, .cleanup): "Cleanup failed"
+        case (.success, .largeFiles): "Files moved to Trash"
+        case (.partial, .largeFiles): "Some files moved to Trash"
+        case (.stopped, .largeFiles): "Moving to Trash stopped"
+        case (.failed, .largeFiles): "Files were not moved to Trash"
         }
     }
 

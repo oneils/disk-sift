@@ -12,8 +12,8 @@ Native macOS app (SwiftUI) that uninstalls apps with their leftovers and cleans 
 
 ## Layout
 
-- `Sources/SiftCore` - UI-free library: `SiftPaths`, `App` (AppInfo, signing, validation), `Leftovers` (sources + merger), `Removal` (`Remover`, `RemovalRoots`), `Junk`, `FS`, `Model`
-- `Sources/DiskSift` - SwiftUI app: `Uninstall`, `Junk`, FDA banner, `.lproj` localization (en, ru)
+- `Sources/SiftCore` - UI-free library: `SiftPaths`, `App` (AppInfo, signing, validation), `Leftovers` (sources + merger), `Removal` (`Remover`, `RemovalRoots`), `Junk`, `LargeFiles` (scope, scanner, Spotlight last-used lookup), `FS`, `Model`
+- `Sources/DiskSift` - SwiftUI app: `Uninstall`, `Junk`, `LargeFiles`, `Shared` (components, report sheet, `ReportContext`), FDA banner, `.lproj` localization (en, ru)
 - `Tests/SiftCoreTests`, `Tests/DiskSiftTests` - Swift Testing
 
 ## Conventions

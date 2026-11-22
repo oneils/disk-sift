@@ -32,7 +32,7 @@ final class JunkModel {
         case idle
         case scanning
         case ready
-        case deleting
+        case removing
         case report(RemovalReport)
     }
 
@@ -42,6 +42,8 @@ final class JunkModel {
         case done
         /// The scan was stopped before this category finished; its findings are incomplete.
         case stopped
+        /// The category's location exists but can't be read (usually no Full Disk Access).
+        case noAccess
     }
 
     struct Row: Identifiable, Equatable {
@@ -71,6 +73,10 @@ final class JunkModel {
         var depth: Int
         var isDirectory: Bool
         var inaccessible: Bool
+        /// Shown instead of the file name when set (iOS backups).
+        var displayName: String?
+
+        var title: String { displayName ?? url.lastPathComponent }
     }
 
     /// Levels that can be expanded below a finding.
@@ -98,19 +104,23 @@ final class JunkModel {
     var missingItem: URL?
 
     private let scanner: any JunkScanning
+    /// `RemovalRoots.make`: caches, logs, dev caches, Mail downloads (delete) and iOS backups (trash).
     private let remover: any FindingRemoving
+    /// `RemovalRoots.largeFiles`: installers (files only, Trash only).
+    private let largeFilesRemover: any FindingRemoving
     private let categories: [any JunkCategory]
     private let runningApps: any RunningApps
     private let lister: any ChildListing
     private let revealer: any FileRevealing
     let paths: SiftPaths
     private(set) var isStopping = false
-    private(set) var deletingProgress: RemovalProgressState?
+    private(set) var removalProgress: RemovalProgressState?
     private var scanTask: Task<Void, Never>?
-    private var removeTask: Task<RemovalReport, Never>?
+    private var removeTask: Task<(RemovalReport, [RemovalPolicy: [RemovedItem]]), Never>?
 
     init(
-        scanner: any JunkScanning, remover: any FindingRemoving, categories: [any JunkCategory],
+        scanner: any JunkScanning, remover: any FindingRemoving, largeFilesRemover: (any FindingRemoving)? = nil,
+        categories: [any JunkCategory],
         runningApps: any RunningApps, lister: any ChildListing = LiveChildLister(),
         revealer: any FileRevealing = LiveFileRevealer(), paths: SiftPaths = .live
     ) {
@@ -119,16 +129,22 @@ final class JunkModel {
         self.revealer = revealer
         self.scanner = scanner
         self.remover = remover
+        // without a dedicated remover, large-files items go to the library one, which refuses them (outside roots)
+        self.largeFilesRemover = largeFilesRemover ?? remover
         self.categories = categories
         self.runningApps = runningApps
         rows = categories.map { Row(id: $0.id, title: $0.title) }
     }
 
     static func live(paths: SiftPaths = .live) -> JunkModel {
-        let categories: [any JunkCategory] = [UserCachesCategory(), DevJunkCategory()]
+        let categories: [any JunkCategory] = [
+            UserCachesCategory(), DevJunkCategory(), InstallersCategory(), IOSBackupsCategory(),
+            MailDownloadsCategory(),
+        ]
         return JunkModel(
             scanner: JunkScanner(categories: categories, paths: paths),
-            remover: Remover(roots: .make(paths)), categories: categories, runningApps: LiveRunningApps(),
+            remover: Remover(roots: .make(paths)), largeFilesRemover: Remover(roots: .largeFiles(paths)),
+            categories: categories, runningApps: LiveRunningApps(),
             paths: paths)
     }
 
@@ -142,11 +158,11 @@ final class JunkModel {
     /// Cancels a running scan or deletion; what was found or deleted so far stays.
     func stop() {
         scanTask?.cancel()
-        stopDelete()
+        stopRemove()
     }
 
-    func stopDelete() {
-        guard phase == .deleting else { return }
+    func stopRemove() {
+        guard phase == .removing else { return }
         isStopping = true
         removeTask?.cancel()
     }
@@ -169,7 +185,7 @@ final class JunkModel {
         }
         // the stream ends early only when cancelled; unfinished categories are then incomplete, not empty
         let cancelled = Task.isCancelled
-        for index in rows.indices where rows[index].state != .done {
+        for index in rows.indices where rows[index].state != .done && rows[index].state != .noAccess {
             if cancelled {
                 rows[index].state = .stopped
             } else if rows[index].state == .scanning {
@@ -196,7 +212,10 @@ final class JunkModel {
                 checked.insert(finding.id)
             }
         case .categoryFinished(let id):
-            update(id) { $0.state = .done }
+            // never hide a "no access" result behind a finished (and empty-looking) category
+            update(id) { if $0.state != .noAccess { $0.state = .done } }
+        case .categoryUnreadable(let id):
+            update(id) { $0.state = .noAccess }
         }
     }
 
@@ -254,11 +273,16 @@ final class JunkModel {
     func node(for finding: Finding, categoryID: String) -> Node {
         Node(
             url: finding.url, size: finding.size ?? 0, parentID: "", categoryID: categoryID, depth: 0,
-            isDirectory: !plainFiles.contains(finding.id), inaccessible: finding.inaccessible)
+            isDirectory: !plainFiles.contains(finding.id), inaccessible: finding.inaccessible,
+            displayName: finding.displayName)
     }
 
     func canExpand(_ node: Node, requiresRoot: Bool = false) -> Bool {
-        node.isDirectory && node.depth < Self.maxDepth && !requiresRoot
+        node.isDirectory && node.depth < Self.maxDepth && !requiresRoot && isExpandable(node.categoryID)
+    }
+
+    private func isExpandable(_ categoryID: String) -> Bool {
+        categories.first { $0.id == categoryID }?.expandable ?? true
     }
 
     func children(of id: String) -> [Node] { (childrenByParent[id] ?? []).compactMap { nodes[$0] } }
@@ -322,7 +346,7 @@ final class JunkModel {
 
     /// Sets an item and everything loaded below it, then refreshes its ancestors.
     func setChecked(id: String, _ on: Bool) {
-        guard phase != .deleting else { return }
+        guard phase != .removing else { return }
         setSubtree(id, on)
         var parent = nodes[id]?.parentID
         while let current = parent, !current.isEmpty {
@@ -391,41 +415,121 @@ final class JunkModel {
 
     var selectedTotal: Int64 { selectedFindings.reduce(0) { $0 + ($1.size ?? 0) } }
 
-    // MARK: delete
+    // MARK: removal
 
-    func requestDelete() {
+    /// One remover call: items of categories that share a removal scope and policy.
+    struct Batch {
+        var scope: JunkRemovalScope
+        var policy: RemovalPolicy
+        var items: [Finding]
+    }
+
+    /// Selected items grouped by their category's scope and policy: permanent deletion first, then the
+    /// Trash (library), then installers. Never decided by category ID, only by what the category declares.
+    func batches(_ items: [Finding]) -> [Batch] {
+        let order: [(JunkRemovalScope, RemovalPolicy)] = [
+            (.library, .delete), (.library, .trash), (.largeFiles, .trash),
+        ]
+        var grouped: [Int: [Finding]] = [:]
+        for item in items {
+            guard let category = category(of: item) else { continue }
+            let key = (category.removalScope, category.policy)
+            guard let index = order.firstIndex(where: { $0 == key }) else { continue }
+            grouped[index, default: []].append(item)
+        }
+        return order.indices.compactMap { index in
+            grouped[index].map { Batch(scope: order[index].0, policy: order[index].1, items: $0) }
+        }
+    }
+
+    private func category(of finding: Finding) -> (any JunkCategory)? {
+        for case .junk(let id) in finding.sources {
+            if let category = categories.first(where: { $0.id == id }) { return category }
+        }
+        return nil
+    }
+
+    private func total(_ policy: RemovalPolicy) -> Int64 {
+        batches(selectedFindings).filter { $0.policy == policy }.flatMap(\.items).reduce(0) { $0 + ($1.size ?? 0) }
+    }
+
+    /// Selected bytes that will be deleted permanently.
+    var selectedDeleteTotal: Int64 { total(.delete) }
+
+    /// Selected bytes that will be moved to the Trash.
+    var selectedTrashTotal: Int64 { total(.trash) }
+
+    /// What the last removal did per policy, for the report.
+    private(set) var lastRemoved: [RemovalPolicy: [RemovedItem]] = [:]
+
+    func requestRemove() {
         guard phase == .ready, !selectedFindings.isEmpty else { return }
         confirming = true
     }
 
-    func delete() async {
+    func remove() async {
         confirming = false
         guard phase == .ready else { return }
-        let items = selectedFindings
-        guard !items.isEmpty else { return }
-        phase = .deleting
+        let batches = batches(selectedFindings)
+        guard !batches.isEmpty else { return }
+        phase = .removing
         isStopping = false
-        deletingProgress = nil
-        let remover = remover
-        // deleting large trees (DerivedData) must not block the main actor
+        removalProgress = nil
+        let removers: [JunkRemovalScope: any FindingRemoving] = [.library: remover, .largeFiles: largeFilesRemover]
+        // removing large trees (DerivedData) must not block the main actor
         let task = Task.detached {
-            await remover.remove(items, policy: .delete) { state in
-                await MainActor.run {
-                    self.deletingProgress = state
-                }
+            await Self.run(batches, removers: removers) { state in
+                await MainActor.run { self.removalProgress = state }
             }
         }
         removeTask = task
-        let report = await task.value
+        let (report, byPolicy) = await task.value
         isStopping = false
         removeTask = nil
-        deletingProgress = nil
+        removalProgress = nil
+        lastRemoved = byPolicy
         let gone = Set(report.removed.map { $0.url.standardizedFileURL.path })
         pruneRemoved(
             gone,
             sizes: Dictionary(
                 report.removed.map { ($0.url.standardizedFileURL.path, $0.size ?? 0) }, uniquingKeysWith: max))
         phase = .report(report)
+    }
+
+    /// Runs batches in order with one combined progress; once stopped, later batches are left unprocessed.
+    nonisolated private static func run(
+        _ batches: [Batch], removers: [JunkRemovalScope: any FindingRemoving],
+        onProgress: @escaping @Sendable (RemovalProgressState) async -> Void
+    ) async -> (RemovalReport, [RemovalPolicy: [RemovedItem]]) {
+        let total = batches.reduce(0) { $0 + $1.items.count }
+        var combined = RemovalReport()
+        var byPolicy: [RemovalPolicy: [RemovedItem]] = [:]
+        var done = 0
+        var bytes: Int64 = 0
+        for batch in batches {
+            if Task.isCancelled || combined.stopped {
+                combined.stopped = true
+                combined.unprocessed += batch.items
+                continue
+            }
+            guard let remover = removers[batch.scope] else { continue }
+            let (offset, base) = (done, bytes)
+            let report = await remover.remove(batch.items, policy: batch.policy) { state in
+                await onProgress(
+                    RemovalProgressState(
+                        current: state.current, completed: offset + state.completed, total: total,
+                        processedBytes: base + state.processedBytes))
+            }
+            combined.removed += report.removed
+            combined.skipped += report.skipped
+            combined.unprocessed += report.unprocessed
+            combined.stopped = combined.stopped || report.stopped
+            byPolicy[batch.policy, default: []] += report.removed
+            done += batch.items.count - report.unprocessed.count
+            bytes += report.removed.reduce(0) { $0 + ($1.size ?? 0) }
+        }
+        if combined.unprocessed.isEmpty { combined.stopped = false }
+        return (combined, byPolicy)
     }
 
     func closeReport() {
