@@ -208,23 +208,23 @@
 - Modify: `Tests/SiftCoreTests/JunkScannerTests.swift`
 - Modify: `Tests/DiskSiftTests/JunkModelTests.swift`
 
-- [ ] add `expandable` and `removalScope` with defaults, `Finding.displayName`, `JunkCategoryError.unreadable`, `JunkProgress.categoryUnreadable(id:)`; scanner maps the error and keeps `.noAccess` from being overwritten by `.categoryFinished`
-- [ ] `JunkSupport.finding` takes the category policy for `requiresRoot`
-- [ ] `JunkModel`: `CategoryState.noAccess`; `canExpand` honors the category; rows use `displayName` when present
-- [ ] write tests: scanner emits `categoryUnreadable` and the stream still finishes; model shows `.noAccess` after the full event sequence (never `.done`, never a zero size); non-expandable category rows don't expand; `requiresRoot` follows the category policy
-- [ ] run `make test` - must pass before task 9
+- [x] add `expandable` and `removalScope` with defaults, `Finding.displayName`, `JunkCategoryError.unreadable`, `JunkProgress.categoryUnreadable(id:)`; scanner maps the error and keeps `.noAccess` from being overwritten by `.categoryFinished`
+- [x] `JunkSupport.finding` takes the category policy for `requiresRoot`
+- [x] `JunkModel`: `CategoryState.noAccess`; `canExpand` honors the category; rows use `displayName` when present
+- [x] write tests: scanner emits `categoryUnreadable` and the stream still finishes; model shows `.noAccess` after the full event sequence (never `.done`, never a zero size); non-expandable category rows don't expand; `requiresRoot` follows the category policy
+- [x] run `make test` - must pass before task 9
 
 ### Task 9: `InstallersCategory`
 
 **Files:**
 - Create: `Sources/SiftCore/Junk/InstallersCategory.swift`
-- Modify: `Sources/SiftCore/SiftPaths.swift` (add `downloads`, `desktop` if not derivable)
+- ~~Modify: `Sources/SiftCore/SiftPaths.swift`~~ (not needed: derived from `paths.home`)
 - Create: `Tests/SiftCoreTests/InstallersCategoryTests.swift`
 
-- [ ] list regular files with installer extensions directly in Downloads/Desktop (no recursion, no directories, no symlinks), `policy: .trash`, not expandable, `checkedByDefault` = older than 30 days with injected `now`
-- [ ] `removalScope: .largeFiles`; unreadable Downloads or Desktop (TCC denied) throws `JunkCategoryError.unreadable` → "No access"
-- [ ] write tests: `.dmg`/`.pkg`/`.mpkg`/`.xip` found; nested and non-installer files ignored; a directory named `X.pkg` ignored; old vs fresh default selection; unreadable Downloads (chmod 000) → `.unreadable`
-- [ ] run `make test` - must pass before task 10
+- [x] list regular files with installer extensions directly in Downloads/Desktop (no recursion, no directories, no symlinks), `policy: .trash`, not expandable, `checkedByDefault` = older than 30 days with injected `now`
+- [x] `removalScope: .largeFiles`; unreadable Downloads or Desktop (TCC denied) throws `JunkCategoryError.unreadable` → "No access"
+- [x] write tests: `.dmg`/`.pkg`/`.mpkg`/`.xip` found; nested and non-installer files ignored; a directory named `X.pkg` ignored; old vs fresh default selection; unreadable Downloads (chmod 000) → `.unreadable`
+- [x] run `make test` - must pass before task 10
 
 ### Task 10: `IOSBackupsCategory`
 
@@ -232,10 +232,10 @@
 - Create: `Sources/SiftCore/Junk/IOSBackupsCategory.swift`
 - Create: `Tests/SiftCoreTests/IOSBackupsCategoryTests.swift`
 
-- [ ] one finding per backup dir, `displayName` from `Info.plist` (`Device Name` + `Last Backup Date`), fallback to the folder name; `policy: .trash`, unchecked, not expandable; `requiresRoot` computed for `.trash`; unreadable parent → `JunkCategoryError.unreadable`
-- [ ] confirm `RemovalRoots.make` already allows `Application Support/MobileSync/Backup/<id>` (strictly inside `Application Support`); add a test
-- [ ] write tests: backup with and without `Info.plist`, corrupt plist, missing Backup dir (no findings), unreadable dir
-- [ ] run `make test` - must pass before task 11
+- [x] one finding per backup dir, `displayName` from `Info.plist` (`Device Name` + `Last Backup Date`), fallback to the folder name; `policy: .trash`, unchecked, not expandable; `requiresRoot` computed for `.trash`; unreadable parent → `JunkCategoryError.unreadable`
+- [x] confirm `RemovalRoots.make` already allows `Application Support/MobileSync/Backup/<id>` (strictly inside `Application Support`); add a test
+- [x] write tests: backup with and without `Info.plist`, corrupt plist, missing Backup dir (no findings), unreadable dir
+- [x] run `make test` - must pass before task 11
 
 ### Task 11: `MailDownloadsCategory`
 
@@ -243,9 +243,9 @@
 - Create: `Sources/SiftCore/Junk/MailDownloadsCategory.swift`
 - Create: `Tests/SiftCoreTests/MailDownloadsCategoryTests.swift`
 
-- [ ] children of Mail Downloads, `policy: .delete`, checked unless `com.apple.mail` is in `running`; unreadable container → `categoryUnreadable`
-- [ ] write tests: findings listed; default checked off when Mail runs; missing dir gives no findings
-- [ ] run `make test` - must pass before task 12
+- [x] children of Mail Downloads, `policy: .delete`, checked unless `com.apple.mail` is in `running`; unreadable container → `categoryUnreadable`
+- [x] write tests: findings listed; default checked off when Mail runs; missing dir gives no findings
+- [x] run `make test` - must pass before task 12
 
 ### Task 12: Mixed-policy removal in `JunkModel`
 
@@ -253,12 +253,12 @@
 - Modify: `Sources/DiskSift/Junk/JunkModel.swift`
 - Modify: `Tests/DiskSiftTests/JunkModelTests.swift`
 
-- [ ] inject two removers (`library`, `largeFiles`); group `selectedFindings` by the `.junk(categoryID:)` source and route by the category's `removalScope` + `policy`; run batches in sequence with combined progress, stop across batches, one combined report
-- [ ] rename `Phase.deleting` / `delete()` / `requestDelete()` to `removing` / `remove()` / `requestRemove()` and update `JunkView` and tests
-- [ ] expose `selectedDeleteTotal` / `selectedTrashTotal` for the confirmation dialog
-- [ ] register the new categories in `JunkModel.live`
-- [ ] write tests: each batch goes to the right remover with the right policy; installers never reach the delete remover; combined report and progress; stop during the first batch leaves the second unprocessed
-- [ ] run `make test` - must pass before task 13
+- [x] inject two removers (`library`, `largeFiles`); group `selectedFindings` by the `.junk(categoryID:)` source and route by the category's `removalScope` + `policy`; run batches in sequence with combined progress, stop across batches, one combined report
+- [x] rename `Phase.deleting` / `delete()` / `requestDelete()` to `removing` / `remove()` / `requestRemove()` and update `JunkView` and tests
+- [x] expose `selectedDeleteTotal` / `selectedTrashTotal` for the confirmation dialog
+- [x] register the new categories in `JunkModel.live`
+- [x] write tests: each batch goes to the right remover with the right policy; installers never reach the delete remover; combined report and progress; stop during the first batch leaves the second unprocessed
+- [x] run `make test` - must pass before task 13
 
 ### Task 13: Junk UI for new categories and combined reports
 
@@ -271,23 +271,24 @@
 - Modify: `Resources/ru.lproj/Localizable.strings`
 - Modify: `Tests/DiskSiftTests/ReportOutcomeTests.swift`
 
-- [ ] start screen lists the new locations; category symbols and notes (installers: moved to Trash; backups: may be the only copy of a device; Mail: re-downloaded on demand); "No access" state
-- [ ] confirmation dialog variants (delete only / trash only / both); `ReportSheet` (context from PR 2) adds per-policy amount lines from the combined report; outcome over the whole operation; neutral "Removing: …" progress text
-- [ ] add en + ru strings
-- [ ] write tests: `ReportOutcome` and per-policy totals for a mixed report
-- [ ] run `make test` and `make lint` - must pass before task 14
+- [x] ➕ footer button is "Clean Up…" and progress says "Removing"; unused "Deleting…"/"Delete…" strings removed
+- [x] start screen lists the new locations; category symbols and notes (installers: moved to Trash; backups: may be the only copy of a device; Mail: re-downloaded on demand); "No access" state
+- [x] confirmation dialog variants (delete only / trash only / both); `ReportSheet` (context from PR 2) adds per-policy amount lines from the combined report; outcome over the whole operation; neutral "Removing: …" progress text
+- [x] add en + ru strings
+- [x] write tests: `ReportOutcome` and per-policy totals for a mixed report
+- [x] run `make test` and `make lint` - must pass before task 14
 
 ### Task 14: Verify acceptance criteria
-- [ ] large-files scope refuses everything in the deny list, other volumes, directories, symlinks and `.delete`, with no caller flags; uninstall/junk scope unchanged (existing tests green)
-- [ ] Large Files tab: threshold filters instantly, nothing preselected, stop/partial states, Trash only
-- [ ] Junk: three new categories with the agreed defaults; installers only ever trashed; "No access" instead of 0 KB
-- [ ] run full test suite: `make test`
-- [ ] run `make lint`, `make app`, `make check-app`
+- [x] large-files scope refuses everything in the deny list, other volumes, directories, symlinks and `.delete`, with no caller flags; uninstall/junk scope unchanged (existing tests green)
+- [x] Large Files tab: threshold filters instantly, nothing preselected, stop/partial states, Trash only
+- [x] Junk: three new categories with the agreed defaults; installers only ever trashed; "No access" instead of 0 KB
+- [x] run full test suite: `make test`
+- [x] run `make lint`, `make app`, `make check-app`
 
 ### Task 15: [Final] Update documentation
-- [ ] update `README.md` "What it does" (Large Files, new junk categories) and "Not in v1" (drop what shipped)
-- [ ] update `CLAUDE.md` Layout with `LargeFiles` in SiftCore and DiskSift
-- [ ] move this plan to `docs/plans/completed/`
+- [x] update `README.md` "What it does" (Large Files, new junk categories) and "Not in v1" (drop what shipped)
+- [x] update `CLAUDE.md` Layout with `LargeFiles` in SiftCore and DiskSift
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 *Items requiring manual intervention or external systems - no checkboxes, informational only*

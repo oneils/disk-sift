@@ -9,6 +9,8 @@ private struct FakeCategory: JunkCategory {
     var id: String
     var title: String
     var policy = RemovalPolicy.delete
+    var expandable = true
+    var removalScope = JunkRemovalScope.library
     func scan(paths: SiftPaths) async throws -> [Finding] { [] }
     func checkedByDefault(_ finding: Finding, running: [RunningApp]) -> Bool {
         !finding.url.lastPathComponent.hasPrefix("keep")
@@ -54,6 +56,7 @@ private final class HangOnceScanner: JunkScanning {
 
 private final class FakeRemover: FindingRemoving {
     let received = OSAllocatedUnfairLock<[[Finding]]>(initialState: [])
+    let policies = OSAllocatedUnfairLock<[RemovalPolicy]>(initialState: [])
     let skipPath: String?
     let pauseOnFirst: Bool
     init(skipPath: String? = nil, pauseOnFirst: Bool = false) {
@@ -67,6 +70,7 @@ private final class FakeRemover: FindingRemoving {
         onProgress: (@Sendable (RemovalProgressState) async -> Void)? = nil
     ) async -> RemovalReport {
         received.withLock { $0.append(findings) }
+        policies.withLock { $0.append(policy) }
         var report = RemovalReport()
         var processedBytes: Int64 = 0
         for (index, finding) in findings.enumerated() {
@@ -323,9 +327,9 @@ final class FakeRevealer: FileRevealing {
         let remover = FakeRemover(skipPath: "/c/small")
         let m = model(remover: remover)
         await m.scan()
-        m.requestDelete()
+        m.requestRemove()
         #expect(m.confirming)
-        await m.delete()
+        await m.remove()
         #expect(!m.confirming)
         guard case .report(let report) = m.phase else {
             Issue.record("expected report")
@@ -344,7 +348,7 @@ final class FakeRevealer: FileRevealing {
         let m = model()
         await m.scan()
         for row in m.rows { m.setCategoryChecked(row, false) }
-        m.requestDelete()
+        m.requestRemove()
         #expect(!m.confirming)
     }
 
@@ -418,7 +422,7 @@ final class FakeRevealer: FileRevealing {
         await m.expand(node(m, "/c/big"))
         m.setCategoryChecked(m.rows[1], false)
         m.setChecked(id: "/c/small", false)
-        await m.delete()
+        await m.remove()
         let sent = remover.received.withLock { $0 }
         #expect(sent.count == 1)
         #expect(sent[0].map(\.id) == ["/c/big"])
@@ -436,7 +440,7 @@ final class FakeRevealer: FileRevealing {
         m.setChecked(id: "/c/small", false)
         m.setChecked(id: "/c/big/g2", false)
         m.setChecked(id: "/c/big/g1/y", false)
-        await m.delete()
+        await m.remove()
         let sent = remover.received.withLock { $0 }
         #expect(sent.count == 1)
         #expect(sent[0].map(\.id) == ["/c/big/g1/x"])
@@ -451,16 +455,16 @@ final class FakeRevealer: FileRevealing {
         let remover = FakeRemover(pauseOnFirst: true)
         let m = model(remover: remover)
         await m.scan()
-        let task = Task { await m.delete() }
-        while m.deletingProgress == nil { await Task.yield() }
-        #expect(m.phase == .deleting)
-        #expect(m.deletingProgress?.completed == 0)
+        let task = Task { await m.remove() }
+        while m.removalProgress == nil { await Task.yield() }
+        #expect(m.phase == .removing)
+        #expect(m.removalProgress?.completed == 0)
         #expect(!m.isStopping)
         m.startScan()
-        await m.delete()
+        await m.remove()
         #expect(remover.received.withLock { $0.count } == 1)
-        #expect(m.phase == .deleting)
-        m.stopDelete()
+        #expect(m.phase == .removing)
+        m.stopRemove()
         #expect(m.isStopping)
         await task.value
         #expect(!m.isStopping)
@@ -470,6 +474,110 @@ final class FakeRevealer: FileRevealing {
         }
         #expect(report.stopped)
         #expect(!report.unprocessed.isEmpty)
-        #expect(m.deletingProgress == nil)
+        #expect(m.removalProgress == nil)
+    }
+
+    @Test func unreadableCategoryShowsNoAccessEvenIfFinishedFollows() async {
+        let m = model(
+            scanner: FakeScanner(events: [
+                .categoryStarted(id: "a"), .categoryUnreadable(id: "a"), .categoryFinished(id: "a"),
+                .categoryStarted(id: "b"), .categoryFinished(id: "b"),
+            ]))
+        await m.scan()
+        #expect(m.rows[0].state == .noAccess)
+        #expect(m.rows[1].state == .done)
+        #expect(!m.scanStopped)
+    }
+
+    @Test func nonExpandableCategoryAndDisplayName() async {
+        let named = Finding(
+            url: URL(fileURLWithPath: "/b/00008030-ABC"), size: 5, confidence: .high, sources: [.junk(categoryID: "a")],
+            displayName: "iPhone — 12 Oct 2026")
+        let m = JunkModel(
+            scanner: FakeScanner(events: [.findingSized(categoryID: "a", finding: named), .categoryFinished(id: "a")]),
+            remover: FakeRemover(),
+            categories: [FakeCategory(id: "a", title: "A", expandable: false), FakeCategory(id: "b", title: "B")],
+            runningApps: NoApps(), lister: FakeLister([:]), revealer: FakeRevealer())
+        await m.scan()
+        let node = m.node(for: m.rows[0].findings[0], categoryID: "a")
+        #expect(node.title == "iPhone — 12 Oct 2026")
+        #expect(!m.canExpand(node))
+        var other = node
+        other.categoryID = "b"
+        #expect(m.canExpand(other))
+    }
+
+    // MARK: mixed policies
+
+    func item(_ path: String, _ category: String, _ size: Int64) -> Finding {
+        Finding(url: URL(fileURLWithPath: path), size: size, confidence: .high, sources: [.junk(categoryID: category)])
+    }
+
+    fileprivate func mixedModel(library: FakeRemover, largeFiles: FakeRemover) -> JunkModel {
+        let events: [JunkProgress] = [
+            .findingSized(categoryID: "del", finding: item("/c/cache", "del", 10)),
+            .findingSized(categoryID: "bak", finding: item("/b/backup", "bak", 1000)),
+            .findingSized(categoryID: "ins", finding: item("/h/Downloads/App.dmg", "ins", 100)),
+            .categoryFinished(id: "del"), .categoryFinished(id: "bak"), .categoryFinished(id: "ins"),
+        ]
+        return JunkModel(
+            scanner: FakeScanner(events: events), remover: library, largeFilesRemover: largeFiles,
+            categories: [
+                FakeCategory(id: "del", title: "Del"),
+                FakeCategory(id: "bak", title: "Bak", policy: .trash),
+                FakeCategory(id: "ins", title: "Ins", policy: .trash, removalScope: .largeFiles),
+            ],
+            runningApps: NoApps(), lister: FakeLister([:]), revealer: FakeRevealer())
+    }
+
+    @Test func batchesRouteByScopeAndPolicy() async {
+        let library = FakeRemover()
+        let large = FakeRemover()
+        let m = mixedModel(library: library, largeFiles: large)
+        await m.scan()
+        #expect(m.selectedDeleteTotal == 10)
+        #expect(m.selectedTrashTotal == 1100)
+        await m.remove()
+        #expect(library.received.withLock { $0.map { $0.map(\.id) } } == [["/c/cache"], ["/b/backup"]])
+        #expect(library.policies.withLock { $0 } == [.delete, .trash])
+        // installers never reach the library remover and never get .delete
+        #expect(large.received.withLock { $0.map { $0.map(\.id) } } == [["/h/Downloads/App.dmg"]])
+        #expect(large.policies.withLock { $0 } == [.trash])
+        guard case .report(let report) = m.phase else {
+            Issue.record("expected report")
+            return
+        }
+        #expect(report.removed.count == 3)
+        #expect(!report.stopped)
+        #expect(m.lastRemoved[.delete]?.map(\.url.path) == ["/c/cache"])
+        #expect(Set(m.lastRemoved[.trash]?.map(\.url.path) ?? []) == ["/b/backup", "/h/Downloads/App.dmg"])
+    }
+
+    @Test func childrenOfAFindingKeepTheirCategoryRoute() {
+        let m = mixedModel(library: FakeRemover(), largeFiles: FakeRemover())
+        let child = item("/b/backup/sub", "bak", 5)
+        let batches = m.batches([child])
+        #expect(batches.count == 1)
+        #expect(batches[0].policy == .trash && batches[0].scope == .library)
+        #expect(m.batches([item("/x", "unknown", 1)]).isEmpty)
+    }
+
+    @Test(.timeLimit(.minutes(1))) func stopInFirstBatchLeavesLaterBatchesUnprocessed() async {
+        let library = FakeRemover(pauseOnFirst: true)
+        let large = FakeRemover()
+        let m = mixedModel(library: library, largeFiles: large)
+        await m.scan()
+        let task = Task { await m.remove() }
+        while m.removalProgress == nil { await Task.yield() }
+        #expect(m.removalProgress?.total == 3)
+        m.stopRemove()
+        await task.value
+        guard case .report(let report) = m.phase else {
+            Issue.record("expected report")
+            return
+        }
+        #expect(report.stopped)
+        #expect(Set(report.unprocessed.map(\.id)).isSuperset(of: ["/b/backup", "/h/Downloads/App.dmg"]))
+        #expect(large.received.withLock { $0 }.isEmpty)
     }
 }

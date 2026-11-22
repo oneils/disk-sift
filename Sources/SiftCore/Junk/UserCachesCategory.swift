@@ -25,7 +25,7 @@ public struct UserCachesCategory: JunkCategory {
             for name in names.sorted() {
                 let url = dir.appendingPathComponent(name)
                 if owned.contains(url.standardizedFileURL.path.lowercased()) { continue }
-                if let finding = JunkSupport.finding(url, categoryID: id, paths: paths) {
+                if let finding = JunkSupport.finding(url, categoryID: id, policy: policy, paths: paths) {
                     result.append(finding)
                 }
             }

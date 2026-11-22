@@ -70,6 +70,8 @@ public struct Finding: Identifiable, Hashable, Sendable {
     public var inaccessible: Bool
     /// Why it matched (leftovers only).
     public var evidence: Set<MatchEvidence>
+    /// Readable name when the file name means nothing (an iOS backup's device name and date).
+    public var displayName: String?
 
     public var id: String { url.path }
 
@@ -78,7 +80,8 @@ public struct Finding: Identifiable, Hashable, Sendable {
 
     public init(
         url: URL, size: Int64? = nil, confidence: Confidence, sources: Set<FindingSource>,
-        requiresRoot: Bool = false, inaccessible: Bool = false, evidence: Set<MatchEvidence> = []
+        requiresRoot: Bool = false, inaccessible: Bool = false, evidence: Set<MatchEvidence> = [],
+        displayName: String? = nil
     ) {
         self.url = url
         self.size = size
@@ -87,6 +90,7 @@ public struct Finding: Identifiable, Hashable, Sendable {
         self.requiresRoot = requiresRoot
         self.inaccessible = inaccessible
         self.evidence = evidence
+        self.displayName = displayName
     }
 }
 

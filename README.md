@@ -19,8 +19,13 @@ Every finding shows its size and how sure DiskSift is that it belongs to the app
 
 - user caches and logs (`~/Library/Caches`, `~/Library/Logs`)
 - developer junk: Xcode DerivedData, Archives, iOS DeviceSupport, simulator caches, Homebrew, npm, pip, cargo and Go caches
+- installers: `.dmg`, `.pkg`, `.mpkg` and `.xip` files directly in Downloads and on the Desktop
+- local iPhone and iPad backups (one row per device, with its name and backup date)
+- Mail downloads: attachments Mail saved when you opened them
 
-User caches and logs start unchecked: pick what you want to delete. Developer caches start checked, except Xcode Archives (they hold dSYMs). Caches are rebuilt by the apps that own them, so they are deleted permanently and the space is freed right away.
+User caches and logs start unchecked: pick what you want to delete. Developer caches start checked, except Xcode Archives (they hold dSYMs). Caches, logs and Mail downloads are rebuilt or downloaded again when needed, so they are deleted permanently and the space is freed right away. Installers and device backups are moved to the Trash instead. Installers older than 30 days start checked; backups never do, since a backup can be the only copy of a device's data. Without Full Disk Access, backups and Mail downloads show "No access" instead of a size.
+
+**Find large files.** A third tab lists files of 100 MB, 500 MB, 1 GB or 5 GB and more anywhere in your home folder, with the date each was last opened (from Spotlight; otherwise the date it was modified). Nothing is selected by default. Files you select are moved to the Trash, never deleted. The scan skips `~/Library`, the Trash, `~/Applications`, apps and media libraries, Git folders and other volumes.
 
 Sizes are allocated sizes on disk. Because of APFS clones and local Time Machine snapshots, the space actually freed can be smaller.
 
@@ -66,7 +71,7 @@ or try to open the app once, then click **Open Anyway** in System Settings → P
 
 ## Not in v1
 
-Large and old file reports, system junk (Trash, installers, iOS backups, language files), removing root-owned items, a background agent that watches for deleted apps, and an App Store version (the App Store sandbox doesn't allow reading other apps' data).
+Emptying the Trash, removing language files from apps (it breaks their code signature), removing root-owned items, a background agent that watches for deleted apps, and an App Store version (the App Store sandbox doesn't allow reading other apps' data).
 
 ## Tech
 

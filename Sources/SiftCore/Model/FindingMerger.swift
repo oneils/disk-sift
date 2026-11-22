@@ -19,6 +19,7 @@ public enum FindingMerger {
             if var existing = byKey[key] {
                 existing.sources.formUnion(finding.sources)
                 existing.evidence.formUnion(finding.evidence)
+                existing.displayName = existing.displayName ?? finding.displayName
                 existing.confidence = max(existing.confidence, finding.confidence)
                 existing.requiresRoot = existing.requiresRoot || finding.requiresRoot
                 existing.inaccessible = existing.inaccessible || finding.inaccessible

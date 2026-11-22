@@ -39,12 +39,10 @@
 "Left alone because the app could not be removed" = "Не тронуто: приложение не удалось удалить";
 "Delete %@ permanently?" = "Удалить %@ навсегда?";
 "Delete" = "Удалить";
-"Delete…" = "Удалить…";
 "Files are deleted immediately, not moved to the Trash. On APFS the free space may take a while to show up because of local snapshots." = "Файлы удаляются сразу, а не перемещаются в Корзину. На APFS свободное место может обновиться не сразу из-за локальных снимков.";
 "Cleanup finished" = "Очистка завершена";
 "Cleanup stopped" = "Очистка остановлена";
 "Uninstall stopped" = "Удаление остановлено";
-"Deleting…" = "Удаление…";
 "Moving to Trash: %@" = "Перемещение в Корзину: %@";
 "%lld of %lld done • %@ moved to Trash" = "Готово %lld из %lld • Перемещено в Корзину: %@";
 "Stopped: %lld items not removed" = "Остановлено: не удалено элементов: %lld";
@@ -58,8 +56,6 @@
 "Stopping after current item…" = "Остановка после текущего объекта…";
 "Stopping does not undo items already removed." = "Остановка не восстанавливает уже удалённые объекты.";
 "Moved to Trash: %lld items, %@" = "Перемещено в Корзину: %lld объектов, %@";
-"Deleting: %@" = "Удаление: %@";
-"%lld of %lld done • %@ deleted" = "Готово %lld из %lld • Удалено: %@";
 
 // Start states and choosing an app
 "Choose Application…" = "Выбрать приложение…";
@@ -68,7 +64,6 @@
 "Choose an application to uninstall" = "Выберите приложение для удаления";
 "or" = "или";
 "Find junk files" = "Поиск мусора";
-"DiskSift checks your user caches and logs (~/Library/Caches, ~/Library/Logs) and developer caches: Xcode, CoreSimulator, Homebrew, npm, pip, Cargo and Go. System-wide caches are not scanned." = "DiskSift сканирует кэши и логи пользователя (~/Library/Caches, ~/Library/Logs) и кэши разработчика: Xcode, CoreSimulator, Homebrew, npm, pip, Cargo и Go. Общесистемные кэши не сканируются.";
 "Start Scan" = "Начать сканирование";
 "Scan Again" = "Сканировать снова";
 "No junk found" = "Мусор не найден";
@@ -178,3 +173,22 @@
 "No files over %@ were found." = "Файлы больше %@ не найдены.";
 "Opened %@" = "Открыт: %@";
 "Modified %@" = "Изменён: %@";
+
+// System junk
+"No access" = "Нет доступа";
+"Grant Full Disk Access in System Settings, then scan again." = "Предоставьте полный доступ к диску в Системных настройках и просканируйте снова.";
+"Installers" = "Установщики";
+"iPhone and iPad backups" = "Бэкапы iPhone и iPad";
+"Mail downloads" = "Вложения Mail";
+"Delete %@ permanently and move %@ to the Trash?" = "Удалить навсегда %@ и переместить в Корзину %@?";
+"Move %@ to the Trash?" = "Переместить %@ в Корзину?";
+"Caches, logs and Mail downloads are deleted immediately. Installers and device backups are moved to the Trash, so you can put them back." = "Кэши, логи и вложения Mail удаляются сразу. Установщики и бэкапы устройств перемещаются в Корзину, их можно вернуть.";
+"Items are moved to the Trash, so you can put them back." = "Объекты перемещаются в Корзину, их можно вернуть.";
+"DiskSift checks your user caches and logs (~/Library/Caches, ~/Library/Logs), developer caches (Xcode, CoreSimulator, Homebrew, npm, pip, Cargo and Go), installers in Downloads and on the Desktop, local iPhone and iPad backups, and Mail downloads. System-wide caches are not scanned." = "DiskSift сканирует кэши и логи пользователя (~/Library/Caches, ~/Library/Logs), кэши разработчика (Xcode, CoreSimulator, Homebrew, npm, pip, Cargo и Go), установщики в «Загрузках» и на Рабочем столе, локальные бэкапы iPhone и iPad и вложения Mail. Общесистемные кэши не сканируются.";
+"Removing: %@" = "Удаление: %@";
+"Removing…" = "Удаление…";
+"%lld of %lld done • %@ removed" = "Готово %lld из %lld • Обработано: %@";
+"Clean Up…" = "Очистить…";
+"Disk images and packages in Downloads and on the Desktop. Moved to the Trash; those older than 30 days are selected." = "Образы дисков и пакеты в «Загрузках» и на Рабочем столе. Перемещаются в Корзину; выбраны те, что старше 30 дней.";
+"Local backups of your devices; this may be the only copy of a device's data. Moved to the Trash; nothing is selected." = "Локальные бэкапы ваших устройств; это может быть единственная копия данных устройства. Перемещаются в Корзину; по умолчанию ничего не выбрано.";
+"Attachments Mail saved when you opened them; Mail downloads them again when needed. Deleted permanently." = "Вложения, которые Mail сохранил при открытии; при необходимости Mail скачает их снова. Удаляются навсегда.";

@@ -66,4 +66,29 @@ import Testing
         #expect(ReportContext.largeFiles.policy == .trash)
         #expect(ReportContext.cleanup.policy == .delete)
     }
+
+    @MainActor @Test func mixedReportShowsBothPolicies() {
+        let deleted = RemovedItem(url: a, size: 10)
+        let trashed = RemovedItem(url: b, size: 1000)
+        let report = RemovalReport(removed: [deleted, trashed])
+        let sheet = ReportSheet(
+            report: report, context: .cleanup, paths: SiftPaths(root: URL(fileURLWithPath: "/r")), reveal: { _ in },
+            removedByPolicy: [.delete: [deleted], .trash: [trashed]], onClose: {})
+        #expect(sheet.shownPolicies == [.delete, .trash])
+        #expect(sheet.removed(.trash) == [trashed])
+        #expect(ReportOutcome(report) == .success)
+    }
+
+    @MainActor @Test func singlePolicyReportsFollowTheContext() {
+        let item = RemovedItem(url: a, size: 1)
+        let paths = SiftPaths(root: URL(fileURLWithPath: "/r"))
+        let trash = ReportSheet(
+            report: RemovalReport(removed: [item]), context: .largeFiles, paths: paths, reveal: { _ in }, onClose: {})
+        #expect(trash.shownPolicies == [.trash])
+        #expect(trash.removed(.delete).isEmpty)
+        let nothing = ReportSheet(
+            report: RemovalReport(skipped: [SkippedItem(url: a, reason: .inUse)]), context: .cleanup, paths: paths,
+            reveal: { _ in }, removedByPolicy: [:], onClose: {})
+        #expect(nothing.shownPolicies == [.delete])
+    }
 }

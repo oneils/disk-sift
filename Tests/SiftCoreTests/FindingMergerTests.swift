@@ -33,6 +33,11 @@ import Testing
         let only = try #require(merged.first)
         #expect(merged.count == 1)
         #expect(only.evidence == [.bundleIDName, .pkgReceipt, .appName])
+        let named = FindingMerger.merge([
+            Finding(url: URL(fileURLWithPath: "/a/b"), confidence: .high, sources: []),
+            Finding(url: URL(fileURLWithPath: "/a/b"), confidence: .high, sources: [], displayName: "iPhone"),
+        ])
+        #expect(named.first?.displayName == "iPhone")
     }
 
     @Test func emptyInput() {
