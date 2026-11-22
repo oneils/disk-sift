@@ -213,3 +213,7 @@
 "Leftovers of removed apps" = "Leftovers of removed apps";
 "Apps that are no longer installed left these items. Review them: nothing is selected." = "Apps that are no longer installed left these items. Review them: nothing is selected.";
 "Containers were not checked without Full Disk Access." = "Containers were not checked without Full Disk Access.";
+"Time Machine local snapshots" = "Time Machine local snapshots";
+"Keep the space of deleted files until macOS removes them, on its own within 24 hours or sooner when the disk runs low on space. Removing them needs administrator rights, so DiskSift only lists them." = "Keep the space of deleted files until macOS removes them, on its own within 24 hours or sooner when the disk runs low on space. Removing them needs administrator rights, so DiskSift only lists them.";
+"None" = "None";
+"Snapshots: %lld" = "Snapshots: %lld";

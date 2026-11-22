@@ -92,6 +92,13 @@ struct JunkView: View {
                             CategoryLabel(model: model, row: row)
                         }
                     }
+                    if model.phase != .scanning {
+                        DisclosureGroup(isExpanded: expandedBinding(SnapshotsLabel.id)) {
+                            ForEach(model.snapshots, id: \.name) { SnapshotRow(snapshot: $0) }
+                        } label: {
+                            SnapshotsLabel(count: model.snapshots.count)
+                        }
+                    }
                 }
                 .disabled(model.phase == .removing)
                 Divider()
@@ -151,32 +158,8 @@ struct JunkView: View {
                 }
                 .font(.callout)
             }
-            if let oldest = model.snapshots.first {
-                snapshotsLine(count: model.snapshots.count, oldest: oldest.date)
-            }
             DistributionBar(model: model)
         }
-    }
-
-    /// Why deleted space may show up late: local snapshots keep it until macOS removes them.
-    private func snapshotsLine(count: Int, oldest: Date?) -> some View {
-        Label {
-            if let oldest {
-                Text(
-                    "Time Machine local snapshots on this disk: \(count), the oldest from \(oldest.formatted(date: .abbreviated, time: .shortened))."
-                )
-            } else {
-                Text("Time Machine local snapshots on this disk: \(count).")
-            }
-        } icon: {
-            Image(systemName: "clock.arrow.circlepath").foregroundStyle(.secondary)
-        }
-        .font(.callout)
-        .foregroundStyle(.secondary)
-        .help(
-            Text(
-                "Deleted files keep using space until macOS removes these snapshots. It does so on its own within 24 hours, or sooner when the disk runs low on space."
-            ))
     }
 
     private var removingHeader: some View {
@@ -259,6 +242,54 @@ private struct CategoryLabel: View {
         case .done:
             SizeText(row.total)
         }
+    }
+}
+
+/// Time Machine local snapshots, listed next to the categories but never selectable: they aren't files,
+/// `tmutil` gives no size, and deleting them needs administrator rights.
+private struct SnapshotsLabel: View {
+    static let id = "time-machine-snapshots"
+    let count: Int
+
+    var body: some View {
+        let title = NSLocalizedString("Time Machine local snapshots", comment: "")
+        HStack(alignment: .firstTextBaseline) {
+            TriStateCheckBox(state: .off, name: title) { _ in }.disabled(true)
+            Image(systemName: "clock.arrow.circlepath").foregroundStyle(.secondary).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: title).font(.headline)
+                Text(
+                    "Keep the space of deleted files until macOS removes them, on its own within 24 hours or sooner when the disk runs low on space. Removing them needs administrator rights, so DiskSift only lists them."
+                )
+                .font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if count == 0 {
+                Text("None").foregroundStyle(.secondary)
+            } else {
+                Text("Snapshots: \(count)").foregroundStyle(.secondary).monospacedDigit()
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct SnapshotRow: View {
+    let snapshot: LocalSnapshot
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                if let date = snapshot.date {
+                    Text(verbatim: date.formatted(date: .abbreviated, time: .shortened))
+                }
+                Text(verbatim: snapshot.name).font(.caption).foregroundStyle(.secondary)
+                    .lineLimit(1).truncationMode(.middle)
+                    .textSelection(.enabled)
+            }
+            Spacer()
+        }
+        .help(snapshot.name)
     }
 }
 

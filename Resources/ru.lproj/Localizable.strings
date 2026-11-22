@@ -213,3 +213,7 @@
 "Leftovers of removed apps" = "Остатки удалённых приложений";
 "Apps that are no longer installed left these items. Review them: nothing is selected." = "Эти объекты оставили приложения, которых больше нет. Проверьте их: по умолчанию ничего не выбрано.";
 "Containers were not checked without Full Disk Access." = "Без полного доступа к диску контейнеры не проверялись.";
+"Time Machine local snapshots" = "Локальные снимки Time Machine";
+"Keep the space of deleted files until macOS removes them, on its own within 24 hours or sooner when the disk runs low on space. Removing them needs administrator rights, so DiskSift only lists them." = "Удерживают место удалённых файлов, пока macOS их не удалит: сама в течение 24 часов или раньше, если на диске заканчивается место. Удаление требует прав администратора, поэтому DiskSift их только показывает.";
+"None" = "Нет";
+"Snapshots: %lld" = "Снимков: %lld";
