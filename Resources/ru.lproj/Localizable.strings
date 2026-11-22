@@ -160,3 +160,21 @@
 "Permanent deletion is not allowed here" = "Безвозвратное удаление здесь не разрешено";
 "Only files can be moved to the Trash from this list; use Finder for folders and links." = "Из этого списка в Корзину можно перемещать только файлы; папки и ссылки удаляйте в Finder.";
 "Items from this list can only be moved to the Trash." = "Объекты из этого списка можно только переместить в Корзину.";
+
+// Large Files tab
+"Files moved to Trash" = "Файлы перемещены в Корзину";
+"Some files moved to Trash" = "Часть файлов перемещена в Корзину";
+"Moving to Trash stopped" = "Перемещение в Корзину остановлено";
+"Files were not moved to Trash" = "Файлы не перемещены в Корзину";
+"Large Files" = "Большие файлы";
+"Find large files" = "Поиск больших файлов";
+"DiskSift looks for large files in your home folder. It skips ~/Library, the Trash, ~/Applications, apps and media libraries, Git folders and other volumes. Files you select are moved to the Trash, never deleted." = "DiskSift ищет большие файлы в вашей домашней папке. Он пропускает ~/Library, Корзину, ~/Applications, приложения и медиатеки, папки Git и другие тома. Выбранные файлы перемещаются в Корзину и никогда не удаляются безвозвратно.";
+"Files over" = "Файлы больше";
+"Scanning: %lld items checked" = "Сканирование: проверено объектов: %lld";
+"Found %lld files, %@" = "Найдено файлов: %lld, %@";
+"Date" = "Дата";
+"The scan was stopped. The list is incomplete." = "Сканирование остановлено. Список неполный.";
+"%lld folders could not be read and were not scanned." = "Не удалось прочитать папок: %lld; они не просканированы.";
+"No files over %@ were found." = "Файлы больше %@ не найдены.";
+"Opened %@" = "Открыт: %@";
+"Modified %@" = "Изменён: %@";
