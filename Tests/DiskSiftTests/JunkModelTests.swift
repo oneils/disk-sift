@@ -513,7 +513,10 @@ final class FakeRevealer: FileRevealing {
         Finding(url: URL(fileURLWithPath: path), size: size, confidence: .high, sources: [.junk(categoryID: category)])
     }
 
-    fileprivate func mixedModel(library: FakeRemover, largeFiles: FakeRemover) -> JunkModel {
+    fileprivate func mixedModel(
+        library: FakeRemover, largeFiles: FakeRemover, snapshots: [LocalSnapshot] = [],
+        snapshotReads: OSAllocatedUnfairLock<Int> = OSAllocatedUnfairLock(initialState: 0)
+    ) -> JunkModel {
         let events: [JunkProgress] = [
             .findingSized(categoryID: "del", finding: item("/c/cache", "del", 10)),
             .findingSized(categoryID: "bak", finding: item("/b/backup", "bak", 1000)),
@@ -527,7 +530,35 @@ final class FakeRevealer: FileRevealing {
                 FakeCategory(id: "bak", title: "Bak", policy: .trash),
                 FakeCategory(id: "ins", title: "Ins", policy: .trash, removalScope: .largeFiles),
             ],
-            runningApps: NoApps(), lister: FakeLister([:]), revealer: FakeRevealer())
+            runningApps: NoApps(), lister: FakeLister([:]), revealer: FakeRevealer(),
+            snapshots: {
+                snapshotReads.withLock { $0 += 1 }
+                return snapshots
+            })
+    }
+
+    @Test func snapshotsAreReadAfterDeletingPermanently() async {
+        let snapshot = LocalSnapshot(name: "com.apple.TimeMachine.2026-11-21-180637.local", date: nil)
+        let reads = OSAllocatedUnfairLock(initialState: 0)
+        let m = mixedModel(
+            library: FakeRemover(), largeFiles: FakeRemover(), snapshots: [snapshot], snapshotReads: reads)
+        await m.scan()
+        await m.remove()
+        #expect(m.lastSnapshots == [snapshot])
+        #expect(reads.withLock { $0 } == 1)
+    }
+
+    @Test func snapshotsAreNotReadWhenEverythingWentToTheTrash() async {
+        let reads = OSAllocatedUnfairLock(initialState: 0)
+        let m = mixedModel(
+            library: FakeRemover(), largeFiles: FakeRemover(),
+            snapshots: [LocalSnapshot(name: "s", date: nil)], snapshotReads: reads)
+        await m.scan()
+        m.setCategoryChecked(m.rows.first { $0.id == "del" }!, false)
+        await m.remove()
+        #expect(m.lastRemoved[.trash]?.count == 2)
+        #expect(m.lastSnapshots.isEmpty)
+        #expect(reads.withLock { $0 } == 0)
     }
 
     @Test func batchesRouteByScopeAndPolicy() async {

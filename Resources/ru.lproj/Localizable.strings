@@ -138,6 +138,9 @@
 "Deleted files totaling %@ (%lld items)" = "Удалены файлы общим объёмом %@ (объектов: %lld)";
 "Disk space is freed when you empty the Trash." = "Место на диске освободится после очистки Корзины.";
 "Free space may take a while to update because of APFS local snapshots." = "Свободное место может обновиться не сразу из-за локальных снимков APFS.";
+"Time Machine local snapshots on this disk: %lld, the oldest from %@." = "Локальных снимков Time Machine на этом диске: %lld, самый старый от %@.";
+"Time Machine local snapshots on this disk: %lld." = "Локальных снимков Time Machine на этом диске: %lld.";
+"Deleted files keep using space until macOS removes these snapshots. It does so on its own within 24 hours, or sooner when the disk runs low on space." = "Удалённые файлы занимают место, пока macOS не удалит эти снимки. Она делает это сама в течение 24 часов или раньше, если на диске заканчивается место.";
 "Not removed: %lld items" = "Не удалено объектов: %lld";
 "DiskSift only removes items in locations it allows for this action." = "DiskSift удаляет только объекты в расположениях, разрешённых для этого действия.";
 "Remove it in Finder with an administrator account if you no longer need it." = "Если объект больше не нужен, удалите его в Finder с учётной записью администратора.";

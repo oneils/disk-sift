@@ -20,7 +20,7 @@ struct JunkView: View {
                 if case .report(let report) = model.phase {
                     ReportSheet(
                         report: report, context: .cleanup, paths: model.paths, reveal: { model.reveal($0) },
-                        removedByPolicy: model.lastRemoved
+                        removedByPolicy: model.lastRemoved, snapshots: model.lastSnapshots
                     ) {
                         model.closeReport()
                     }

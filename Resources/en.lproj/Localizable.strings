@@ -138,6 +138,9 @@
 "Deleted files totaling %@ (%lld items)" = "Deleted files totaling %@ (%lld items)";
 "Disk space is freed when you empty the Trash." = "Disk space is freed when you empty the Trash.";
 "Free space may take a while to update because of APFS local snapshots." = "Free space may take a while to update because of APFS local snapshots.";
+"Time Machine local snapshots on this disk: %lld, the oldest from %@." = "Time Machine local snapshots on this disk: %lld, the oldest from %@.";
+"Time Machine local snapshots on this disk: %lld." = "Time Machine local snapshots on this disk: %lld.";
+"Deleted files keep using space until macOS removes these snapshots. It does so on its own within 24 hours, or sooner when the disk runs low on space." = "Deleted files keep using space until macOS removes these snapshots. It does so on its own within 24 hours, or sooner when the disk runs low on space.";
 "Not removed: %lld items" = "Not removed: %lld items";
 "DiskSift only removes items in locations it allows for this action." = "DiskSift only removes items in locations it allows for this action.";
 "Remove it in Finder with an administrator account if you no longer need it." = "Remove it in Finder with an administrator account if you no longer need it.";
