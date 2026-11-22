@@ -5,53 +5,72 @@ struct JunkView: View {
     @Bindable var model: JunkModel
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            List {
-                ForEach(model.rows) { row in
-                    DisclosureGroup(isExpanded: expandedBinding(row.id)) {
-                        ForEach(row.findings) { finding in
-                            JunkItemRow(
-                                model: model, node: model.node(for: finding, categoryID: row.id),
-                                requiresRoot: finding.requiresRoot)
-                        }
-                    } label: {
-                        HStack {
-                            Toggle(
-                                isOn: Binding(
-                                    get: { model.isCategoryChecked(row) },
-                                    set: { model.setCategoryChecked(row, $0) })
-                            ) {
-                                Text(LocalizedStringKey(row.title))
-                            }
-                            Spacer()
-                            if row.state == .scanning { ProgressView().controlSize(.small) }
-                            Text(formatBytes(row.total)).monospacedDigit().foregroundStyle(.secondary)
-                        }
+        content
+            .confirmationDialog(
+                Text("Delete \(formatBytes(model.selectedTotal)) permanently?"),
+                isPresented: $model.confirming, titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) { Task { await model.delete() } }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(
+                    "Files are deleted immediately, not moved to the Trash. On APFS the free space may take a while to show up because of local snapshots."
+                )
+            }
+            .sheet(isPresented: reportBinding) {
+                if case .report(let report) = model.phase {
+                    ReportSheet(
+                        report: report, policy: .delete, paths: model.paths, reveal: { model.reveal($0) }
+                    ) {
+                        model.closeReport()
                     }
                 }
             }
-            .disabled(model.phase == .deleting)
-            footer
-        }
-        .confirmationDialog(
-            Text("Delete \(formatBytes(model.selectedTotal)) permanently?"),
-            isPresented: $model.confirming, titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) { Task { await model.delete() } }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(
-                "Files are deleted immediately, not moved to the Trash. On APFS the free space may take a while to show up because of local snapshots."
-            )
-        }
-        .sheet(isPresented: reportBinding) {
-            if case .report(let report) = model.phase {
-                ReportSheet(
-                    report: report, policy: .delete, title: report.stopped ? "Cleanup stopped" : "Cleanup finished"
-                ) {
-                    model.closeReport()
+            .missingItemAlert($model.missingItem)
+    }
+
+    @ViewBuilder private var content: some View {
+        if !model.hasScanned {
+            EmptyStateView(
+                symbol: "magnifyingglass",
+                title: "Find junk files",
+                message:
+                    "DiskSift checks your user caches and logs (~/Library/Caches, ~/Library/Logs) and developer caches: Xcode, CoreSimulator, Homebrew, npm, pip, Cargo and Go. System-wide caches are not scanned."
+            ) {
+                Button("Start Scan") { model.startScan() }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .keyboardShortcut(.defaultAction)
+            }
+        } else if model.foundNothing {
+            EmptyStateView(
+                symbol: "checkmark.circle",
+                title: "No junk found",
+                message: "The scanned locations contain nothing to clean."
+            ) {
+                Button("Scan Again") { model.startScan() }
+                    .controlSize(.large)
+            }
+        } else {
+            VStack(spacing: 0) {
+                header
+                Divider()
+                List {
+                    ForEach(model.rows) { row in
+                        DisclosureGroup(isExpanded: expandedBinding(row.id)) {
+                            ForEach(model.sortedFindings(row)) { finding in
+                                JunkItemRow(
+                                    model: model, node: model.node(for: finding, categoryID: row.id),
+                                    requiresRoot: finding.requiresRoot)
+                            }
+                        } label: {
+                            CategoryLabel(model: model, row: row)
+                        }
+                    }
                 }
+                .disabled(model.phase == .deleting)
+                Divider()
+                footer
             }
         }
     }
@@ -68,58 +87,126 @@ struct JunkView: View {
             set: { if !$0 { model.closeReport() } })
     }
 
-    private var header: some View {
-        HStack {
-            if model.phase == .scanning {
-                ProgressView().controlSize(.small)
-                Text("Scanning: \(model.finishedCount) of \(model.rows.count) done")
-                Spacer()
-                Button("Stop") { model.stop() }
-            } else if model.phase == .deleting {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        ProgressView().controlSize(.small)
-                        if let p = model.deletingProgress {
-                            Text("Deleting: \(p.current.url.lastPathComponent)")
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                                .help(p.current.url.path)
-                        } else {
-                            Text("Deleting…")
-                        }
-                    }
-                    if let p = model.deletingProgress {
-                        Text("\(p.completed) of \(p.total) done • \(formatBytes(p.processedBytes)) deleted")
-                            .foregroundStyle(.secondary)
-                    }
-                    HStack {
-                        Spacer()
-                        Button(
-                            LocalizedStringKey(
-                                model.isStopping ? "Stopping after current item…" : "Stop after current item")
-                        ) {
-                            model.stopDelete()
-                        }
-                        .disabled(model.isStopping)
-                    }
+    @ViewBuilder private var header: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            switch model.phase {
+            case .scanning:
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text("Scanning: \(model.finishedCount) of \(model.rows.count) done")
+                    Spacer()
+                    Button("Stop") { model.stop() }
                 }
-            } else {
-                Spacer()
-                Button("Scan") { model.startScan() }
-                    .disabled(model.phase == .deleting)
+            case .deleting:
+                deletingHeader
+            default:
+                summaryHeader
             }
         }
         .padding()
     }
 
+    private var summaryHeader: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Found \(formatBytes(model.foundTotal)) in \(model.foundCount) items").font(.headline)
+                Spacer()
+                Picker("Sort by", selection: $model.sort) {
+                    ForEach(ResultSort.allCases) { Text(LocalizedStringKey($0.titleKey)).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+                Button("Scan Again") { model.startScan() }
+            }
+            if model.scanStopped {
+                Label {
+                    Text("The scan was stopped. Categories marked Incomplete were not fully scanned.")
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                }
+                .font(.callout)
+            }
+            DistributionBar(model: model)
+        }
+    }
+
+    private var deletingHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                ProgressView().controlSize(.small)
+                if let p = model.deletingProgress {
+                    Text("Deleting: \(p.current.url.lastPathComponent)")
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help(p.current.url.path)
+                } else {
+                    Text("Deleting…")
+                }
+            }
+            if let p = model.deletingProgress {
+                Text("\(p.completed) of \(p.total) done • \(formatBytes(p.processedBytes)) deleted")
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Spacer()
+                Button(
+                    LocalizedStringKey(
+                        model.isStopping ? "Stopping after current item…" : "Stop after current item")
+                ) {
+                    model.stopDelete()
+                }
+                .disabled(model.isStopping)
+            }
+        }
+    }
+
     private var footer: some View {
         HStack {
-            Text("Selected: \(formatBytes(model.selectedTotal))")
+            Text("Selected: \(formatBytes(model.selectedTotal))").font(.headline)
             Spacer()
             Button("Delete…") { model.requestDelete() }
+                .buttonStyle(.borderedProminent)
                 .disabled(model.phase != .ready || model.selectedFindings.isEmpty)
         }
         .padding()
+    }
+}
+
+private struct CategoryLabel: View {
+    @Bindable var model: JunkModel
+    let row: JunkModel.Row
+
+    var body: some View {
+        let title = NSLocalizedString(row.title, comment: "")
+        HStack(alignment: .firstTextBaseline) {
+            TriStateCheckBox(state: model.categoryState(row), name: title) { model.setCategoryChecked(row, $0) }
+                .disabled(!model.hasSelectable(row) || model.phase == .deleting)
+            Image(systemName: JunkCategoryInfo.symbol(row.id)).foregroundStyle(.secondary).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: title).font(.headline)
+                if let note = JunkCategoryInfo.noteKey(row.id) {
+                    Text(LocalizedStringKey(note)).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            status
+        }
+        .padding(.vertical, 2)
+    }
+
+    @ViewBuilder private var status: some View {
+        switch row.state {
+        case .pending:
+            Text("Waiting…").foregroundStyle(.secondary)
+        case .scanning:
+            ProgressView().controlSize(.small)
+            SizeText(text: formatBytes(row.total))
+        case .stopped:
+            Text("Incomplete").foregroundStyle(.orange)
+            SizeText(text: "≥ " + formatBytes(row.total))
+        case .done:
+            SizeText(row.total)
+        }
     }
 }
 
@@ -134,7 +221,7 @@ private struct JunkItemRow: View {
                 isExpanded: Binding(
                     get: { model.isExpanded(node.id) }, set: { model.setExpanded(node, $0) })
             ) {
-                ForEach(model.children(of: node.id)) { child in
+                ForEach(model.sortedChildren(of: node.id)) { child in
                     JunkItemRow(model: model, node: child)
                 }
             } label: {
@@ -146,40 +233,121 @@ private struct JunkItemRow: View {
     }
 
     private var line: some View {
-        HStack {
-            CheckBox(state: model.state(of: node.id)) { on in model.setChecked(id: node.id, on) }
-                .disabled(requiresRoot)
-            Text(node.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
+        HStack(alignment: .firstTextBaseline) {
+            TriStateCheckBox(state: model.state(of: node.id), name: node.url.lastPathComponent) { on in
+                model.setChecked(id: node.id, on)
+            }
+            .disabled(requiresRoot)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: node.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
+                if node.depth == 0 {
+                    Text(verbatim: model.paths.displayPath(node.url))
+                        .font(.caption).foregroundStyle(.secondary)
+                        .lineLimit(1).truncationMode(.middle)
+                    if let note = JunkCategoryInfo.itemNoteKey(node.url) {
+                        Text(LocalizedStringKey(note)).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                if requiresRoot {
+                    Text("Needs administrator rights; DiskSift will not remove it.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                if node.inaccessible {
+                    Text("Some contents could not be read; the size may be incomplete.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
             Spacer()
             if model.isLoading(node.id) { ProgressView().controlSize(.small) }
-            if requiresRoot { Text("Needs admin").foregroundStyle(.secondary) }
-            Text(node.depth == 0 && node.size == 0 && !requiresRoot ? "—" : formatBytes(node.size))
-                .monospacedDigit().foregroundStyle(.secondary)
+            SizeText(text: node.depth == 0 && node.size == 0 && !requiresRoot ? "—" : formatBytes(node.size))
         }
-        .opacity(requiresRoot ? 0.5 : 1)
+        .opacity(requiresRoot ? 0.6 : 1)
         .help(node.url.path)
+        .contextMenu { RevealMenu(url: node.url, reveal: { model.reveal($0) }) }
     }
 }
 
-/// Tri-state checkbox; a click on a mixed box checks everything.
-private struct CheckBox: View {
-    let state: JunkModel.CheckState
-    let set: (Bool) -> Void
+/// One bar of what the scan found, split by category, with a legend carrying exact values.
+/// Categories never overlap and children are not counted, so the parts add up to the list total.
+private struct DistributionBar: View {
+    let model: JunkModel
 
-    var body: some View {
-        Button {
-            set(state != .on)
-        } label: {
-            Image(systemName: symbol).foregroundStyle(state == .off ? Color.secondary : Color.accentColor)
-        }
-        .buttonStyle(.plain)
+    private static let palette: [Color] = [.accentColor, .purple, .teal, .pink]
+
+    private var parts: [(row: JunkModel.Row, color: Color)] {
+        model.rows.enumerated().filter { $0.element.total > 0 }
+            .map { ($0.element, Self.palette[$0.offset % Self.palette.count]) }
     }
 
-    private var symbol: String {
-        switch state {
-        case .on: "checkmark.square.fill"
-        case .mixed: "minus.square.fill"
-        case .off: "square"
+    var body: some View {
+        let total = max(model.foundTotal, 1)
+        VStack(alignment: .leading, spacing: 6) {
+            GeometryReader { geo in
+                let gaps = CGFloat(max(parts.count - 1, 0)) * 2
+                HStack(spacing: 2) {
+                    ForEach(parts, id: \.row.id) { part in
+                        Rectangle()
+                            .fill(part.color)
+                            .frame(
+                                width: max(2, (geo.size.width - gaps) * CGFloat(part.row.total) / CGFloat(total)))
+                    }
+                }
+            }
+            .frame(height: 10)
+            .clipShape(Capsule())
+            .accessibilityHidden(true)
+            HStack(spacing: 16) {
+                ForEach(parts, id: \.row.id) { part in
+                    HStack(spacing: 6) {
+                        Circle().fill(part.color).frame(width: 8, height: 8).accessibilityHidden(true)
+                        Text(LocalizedStringKey(part.row.title))
+                        Text(verbatim: "\(formatBytes(part.row.total)) · \(percent(part.row.total, of: total))")
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+                Spacer()
+            }
+            .font(.caption)
+            Text(
+                model.scanStopped
+                    ? "Found data only (incomplete scan), not total disk usage or guaranteed free space."
+                    : "Found data only, not total disk usage or guaranteed free space."
+            )
+            .font(.caption2)
+            .foregroundStyle(.secondary)
         }
+    }
+
+    private func percent(_ part: Int64, of total: Int64) -> String {
+        (Double(part) / Double(total)).formatted(.percent.precision(.fractionLength(0)))
+    }
+}
+
+/// What deleting each junk category (and notable item) means.
+enum JunkCategoryInfo {
+    static func symbol(_ categoryID: String) -> String {
+        categoryID == DevJunkCategory.categoryID ? "hammer" : "archivebox"
+    }
+
+    static func noteKey(_ categoryID: String) -> String? {
+        switch categoryID {
+        case UserCachesCategory.categoryID:
+            "Apps recreate caches as needed; the next launch may be slower. Nothing is selected by default."
+        case DevJunkCategory.categoryID:
+            "Build products and package caches; rebuilt or downloaded again when needed."
+        default: nil
+        }
+    }
+
+    static func itemNoteKey(_ url: URL) -> String? {
+        let path = url.standardizedFileURL.path
+        if path.hasSuffix("/Xcode/Archives") {
+            return "Contains debug symbols needed to read crash reports. Not selected by default."
+        }
+        if path.hasSuffix("/Xcode/DerivedData") { return "Rebuilt on the next build." }
+        if path.hasSuffix("/Xcode/iOS DeviceSupport") { return "Downloaded again when a device is connected." }
+        return nil
     }
 }

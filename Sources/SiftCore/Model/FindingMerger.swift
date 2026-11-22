@@ -2,9 +2,9 @@ import Foundation
 
 /// Dedupes findings from several sources and collapses findings nested inside other findings.
 public enum FindingMerger {
-    /// - Exact duplicates (same path): sources unioned, max confidence, flags OR'ed, largest known size.
+    /// - Exact duplicates (same path): sources and evidence unioned, max confidence, flags OR'ed, largest known size.
     /// - A finding inside another finding is dropped; the ancestor keeps its own confidence and size
-    ///   (a large low-confidence folder is not promoted by a high child), sources are unioned and
+    ///   (a large low-confidence folder is not promoted by a high child), sources and evidence are unioned and
     ///   `requiresRoot`/`inaccessible` are OR'ed.
     ///
     /// Paths are compared component-wise and case-insensitively (default APFS), so `/a/b` is not
@@ -18,6 +18,7 @@ public enum FindingMerger {
             let key = comps.joined(separator: "/")
             if var existing = byKey[key] {
                 existing.sources.formUnion(finding.sources)
+                existing.evidence.formUnion(finding.evidence)
                 existing.confidence = max(existing.confidence, finding.confidence)
                 existing.requiresRoot = existing.requiresRoot || finding.requiresRoot
                 existing.inaccessible = existing.inaccessible || finding.inaccessible
@@ -42,6 +43,7 @@ public enum FindingMerger {
             if let ancestorKey = keptAncestor(of: comps, in: kept) {
                 var ancestor = kept[ancestorKey]!
                 ancestor.sources.formUnion(finding.sources)
+                ancestor.evidence.formUnion(finding.evidence)
                 ancestor.requiresRoot = ancestor.requiresRoot || finding.requiresRoot
                 ancestor.inaccessible = ancestor.inaccessible || finding.inaccessible
                 kept[ancestorKey] = ancestor

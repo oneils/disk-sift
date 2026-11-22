@@ -30,6 +30,28 @@ private struct FakeScanner: JunkScanning {
     }
 }
 
+/// Hangs on the first scan (until stopped), then finishes with `events`.
+private final class HangOnceScanner: JunkScanning {
+    let events: [JunkProgress]
+    let calls = OSAllocatedUnfairLock(initialState: 0)
+    init(events: [JunkProgress]) { self.events = events }
+    func scan() -> AsyncStream<JunkProgress> {
+        let first = calls.withLock { count in
+            count += 1
+            return count == 1
+        }
+        let events = events
+        return AsyncStream { continuation in
+            if first {
+                continuation.yield(.categoryStarted(id: "a"))
+            } else {
+                for event in events { continuation.yield(event) }
+                continuation.finish()
+            }
+        }
+    }
+}
+
 private final class FakeRemover: FindingRemoving {
     let received = OSAllocatedUnfairLock<[[Finding]]>(initialState: [])
     let skipPath: String?
@@ -104,6 +126,18 @@ private struct NoApps: RunningApps {
     func running() -> [RunningApp] { [] }
 }
 
+/// Reveals only `existing` paths and records what was asked.
+final class FakeRevealer: FileRevealing {
+    let existing: Set<String>
+    let revealed = OSAllocatedUnfairLock<[String]>(initialState: [])
+    init(existing: Set<String> = []) { self.existing = existing }
+    func reveal(_ url: URL) -> Bool {
+        guard existing.contains(url.path) else { return false }
+        revealed.withLock { $0.append(url.path) }
+        return true
+    }
+}
+
 @MainActor
 @Suite private struct JunkModelTests {
     func finding(_ path: String, _ size: Int64, root: Bool = false) -> Finding {
@@ -126,12 +160,13 @@ private struct NoApps: RunningApps {
     }
 
     fileprivate func model(
-        scanner: FakeScanner? = nil, remover: FakeRemover = FakeRemover(), lister: FakeLister? = nil
+        scanner: FakeScanner? = nil, remover: FakeRemover = FakeRemover(), lister: FakeLister? = nil,
+        revealer: FakeRevealer = FakeRevealer()
     ) -> JunkModel {
         JunkModel(
             scanner: scanner ?? FakeScanner(events: events), remover: remover,
             categories: [FakeCategory(id: "a", title: "A"), FakeCategory(id: "b", title: "B")],
-            runningApps: NoApps(), lister: lister ?? FakeLister([:]))
+            runningApps: NoApps(), lister: lister ?? FakeLister([:]), revealer: revealer)
     }
 
     fileprivate var lister: FakeLister {
@@ -168,7 +203,92 @@ private struct NoApps: RunningApps {
         m.stop()
         await m.waitForScan()
         #expect(m.phase == .ready)
+        // unfinished categories are marked incomplete, never shown as verified empty
+        #expect(m.rows.map(\.state) == [.stopped, .stopped])
+        #expect(m.scanStopped)
+        #expect(!m.foundNothing)
+    }
+
+    @Test func beforeFirstScanNothingIsKnown() {
+        let m = model()
+        #expect(!m.hasScanned)
+        #expect(m.rows.allSatisfy { $0.state == .pending })
+        #expect(m.foundTotal == 0)
+        #expect(!m.foundNothing)
+        #expect(!m.scanStopped)
+    }
+
+    @Test func completeEmptyScanFoundNothing() async {
+        let m = model(scanner: FakeScanner(events: [.categoryStarted(id: "a"), .categoryFinished(id: "a")]))
+        await m.scan()
+        #expect(m.hasScanned)
+        #expect(m.foundNothing)
+        #expect(!m.scanStopped)
+        // "b" never reported: a finished stream still counts as complete, so it is not marked stopped
         #expect(m.rows[0].state == .done)
+    }
+
+    @Test func rescanClearsStoppedState() async {
+        let m = JunkModel(
+            scanner: HangOnceScanner(events: events), remover: FakeRemover(),
+            categories: [FakeCategory(id: "a", title: "A"), FakeCategory(id: "b", title: "B")],
+            runningApps: NoApps(), lister: FakeLister([:]), revealer: FakeRevealer())
+        m.startScan()
+        for _ in 0..<50 where m.rows[0].state != .scanning { await Task.yield() }
+        m.stop()
+        await m.waitForScan()
+        #expect(m.scanStopped)
+        await m.scan()
+        #expect(!m.scanStopped)
+        #expect(m.rows.allSatisfy { $0.state == .done })
+    }
+
+    @Test func foundTotalsAndSortKeepSelection() async {
+        let m = model()
+        await m.scan()
+        #expect(m.foundTotal == 1167)
+        #expect(m.foundCount == 5)
+        let before = m.selectedFindings.map(\.id)
+        m.sort = .name
+        #expect(m.sortedFindings(m.rows[0]).map(\.url.lastPathComponent) == ["big", "keepme", "rootonly", "small"])
+        #expect(m.selectedFindings.map(\.id) == before)
+        m.sort = .size
+        #expect(m.sortedFindings(m.rows[0]).map(\.url.lastPathComponent) == ["big", "keepme", "small", "rootonly"])
+    }
+
+    @Test func sortedChildrenFollowSort() async {
+        let m = model(lister: lister)
+        await m.scan()
+        await m.expand(node(m, "/c/keepme"))
+        m.sort = .name
+        #expect(m.sortedChildren(of: "/c/keepme").map(\.url.lastPathComponent) == ["k1", "k2"])
+        m.setChecked(id: "/c/keepme/k2", true)
+        m.sort = .size
+        #expect(m.state(of: "/c/keepme/k2") == .on)
+        #expect(m.state(of: "/c/keepme") == .mixed)
+    }
+
+    @Test func categoryTriState() async {
+        let m = model(lister: lister)
+        await m.scan()
+        #expect(m.categoryState(m.rows[0]) == .mixed)  // keepme unchecked
+        #expect(m.categoryState(m.rows[1]) == .on)
+        m.setCategoryChecked(m.rows[0], false)
+        #expect(m.categoryState(m.rows[0]) == .off)
+        await m.expand(node(m, "/c/big"))
+        m.setChecked(id: "/c/big/g2", true)
+        #expect(m.categoryState(m.rows[0]) == .mixed)  // only part of a finding
+        #expect(m.hasSelectable(m.rows[0]))
+    }
+
+    @Test func revealMissingItemIsReported() {
+        let revealer = FakeRevealer(existing: ["/c/big"])
+        let m = model(revealer: revealer)
+        m.reveal(URL(fileURLWithPath: "/c/big"))
+        #expect(m.missingItem == nil)
+        #expect(revealer.revealed.withLock { $0 } == ["/c/big"])
+        m.reveal(URL(fileURLWithPath: "/c/gone"))
+        #expect(m.missingItem?.path == "/c/gone")
     }
 
     @Test func cancelKeepsFindingsSoFar() async {

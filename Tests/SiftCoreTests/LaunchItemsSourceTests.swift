@@ -24,6 +24,7 @@ import Testing
         #expect(found.count == 3)
         #expect(found.allSatisfy { $0.confidence == .high && !$0.requiresRoot })
         #expect(found.first?.sources == [.launchItem(label: "com.foo.bar", domain: .user)])
+        #expect(found.allSatisfy { $0.evidence == [.launchLabel] })
     }
 
     @Test func programInsideAppMatches() async throws {
@@ -33,6 +34,7 @@ import Testing
         try plist(fx, "home/Library/LaunchAgents/y.plist", ["Label": "other.name", "ProgramArguments": [exe, "-v"]])
         let found = try await LaunchItemsSource().findings(for: app(fx), paths: fx.paths)
         #expect(found.count == 2)
+        #expect(found.allSatisfy { $0.evidence == [.launchProgramInApp] })
     }
 
     @Test func privilegedHelperMatchesAndSystemIsRootOnly() async throws {

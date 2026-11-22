@@ -27,12 +27,9 @@
 "Applications from /Applications or ~/Applications" = "Applications from /Applications or ~/Applications";
 "Selected: %@" = "Selected: %@";
 "Move to Trash" = "Move to Trash";
-"Needs admin" = "Needs admin";
 "Low" = "Low";
 "Medium" = "Medium";
 "High" = "High";
-"Removed: %lld items, %@" = "Removed: %lld items, %@";
-"Skipped: %lld items" = "Skipped: %lld items";
 "Done" = "Done";
 "Outside the allowed locations" = "Outside the allowed locations";
 "Needs administrator rights" = "Needs administrator rights";
@@ -53,7 +50,6 @@
 "Stopped: %lld items not removed" = "Stopped: %lld items not removed";
 "Scanning: %lld of %lld done" = "Scanning: %lld of %lld done";
 "Stop" = "Stop";
-"Scan" = "Scan";
 "User caches and logs" = "User caches and logs";
 "Developer caches" = "Developer caches";
 
@@ -62,6 +58,99 @@
 "Stopping after current item…" = "Stopping after current item…";
 "Stopping does not undo items already removed." = "Stopping does not undo items already removed.";
 "Moved to Trash: %lld items, %@" = "Moved to Trash: %lld items, %@";
-"Deleted: %lld items, %@" = "Deleted: %lld items, %@";
 "Deleting: %@" = "Deleting: %@";
 "%lld of %lld done • %@ deleted" = "%lld of %lld done • %@ deleted";
+
+// Start states and choosing an app
+"Choose Application…" = "Choose Application…";
+"Choose Another Application…" = "Choose Another Application…";
+"Choose" = "Choose";
+"Choose an application to uninstall" = "Choose an application to uninstall";
+"or" = "or";
+"Find junk files" = "Find junk files";
+"DiskSift checks your user caches and logs (~/Library/Caches, ~/Library/Logs) and developer caches: Xcode, CoreSimulator, Homebrew, npm, pip, Cargo and Go. System-wide caches are not scanned." = "DiskSift checks your user caches and logs (~/Library/Caches, ~/Library/Logs) and developer caches: Xcode, CoreSimulator, Homebrew, npm, pip, Cargo and Go. System-wide caches are not scanned.";
+"Start Scan" = "Start Scan";
+"Scan Again" = "Scan Again";
+"No junk found" = "No junk found";
+"The scanned locations contain nothing to clean." = "The scanned locations contain nothing to clean.";
+"Waiting…" = "Waiting…";
+"Incomplete" = "Incomplete";
+"The scan was stopped. Categories marked Incomplete were not fully scanned." = "The scan was stopped. Categories marked Incomplete were not fully scanned.";
+"Found %@ in %lld items" = "Found %@ in %lld items";
+"Found data only, not total disk usage or guaranteed free space." = "Found data only, not total disk usage or guaranteed free space.";
+"Found data only (incomplete scan), not total disk usage or guaranteed free space." = "Found data only (incomplete scan), not total disk usage or guaranteed free space.";
+"Apps recreate caches as needed; the next launch may be slower. Nothing is selected by default." = "Apps recreate caches as needed; the next launch may be slower. Nothing is selected by default.";
+"Build products and package caches; rebuilt or downloaded again when needed." = "Build products and package caches; rebuilt or downloaded again when needed.";
+"Contains debug symbols needed to read crash reports. Not selected by default." = "Contains debug symbols needed to read crash reports. Not selected by default.";
+"Rebuilt on the next build." = "Rebuilt on the next build.";
+"Downloaded again when a device is connected." = "Downloaded again when a device is connected.";
+"Some contents could not be read; the size may be incomplete." = "Some contents could not be read; the size may be incomplete.";
+"Needs administrator rights; DiskSift will not remove it." = "Needs administrator rights; DiskSift will not remove it.";
+
+// Uninstall summary and grouping
+"Version %@" = "Version %@";
+"Application %@ • Related files %@ in %lld items" = "Application %@ • Related files %@ in %lld items";
+"Details" = "Details";
+"Location" = "Location";
+"Bundle ID" = "Bundle ID";
+"Team ID" = "Team ID";
+"Not signed by a registered developer" = "Not signed by a registered developer";
+"Related files" = "Related files";
+"No related files were found. Only the application will be moved to the Trash." = "No related files were found. Only the application will be moved to the Trash.";
+"Total to move to Trash: %@" = "Total to move to Trash: %@";
+"Application %@ + selected files %@" = "Application %@ + selected files %@";
+"(all users)" = "(all users)";
+"Application Support" = "Application Support";
+"Caches" = "Caches";
+"Preferences" = "Preferences";
+"Containers" = "Containers";
+"Group Containers" = "Group Containers";
+"Saved Application State" = "Saved Application State";
+"Logs" = "Logs";
+"Web Data and Cookies" = "Web Data and Cookies";
+"Login Services" = "Login Services";
+"Application Scripts" = "Application Scripts";
+"Autosave Information" = "Autosave Information";
+"Other" = "Other";
+"Shared data: other apps may use it." = "Shared data: other apps may use it.";
+"Strong match: selected by default." = "Strong match: selected by default.";
+"Possible match: review before removing." = "Possible match: review before removing.";
+"Weak match: not selected by default. Review before removing." = "Weak match: not selected by default. Review before removing.";
+"Named after the app's bundle identifier." = "Named after the app's bundle identifier.";
+"Matched only by the app's name; it may belong to another app." = "Matched only by the app's name; it may belong to another app.";
+"App group container listed in the app's signature." = "App group container listed in the app's signature.";
+"Matched only by the developer's Team ID; it may belong to another app from that developer." = "Matched only by the developer's Team ID; it may belong to another app from that developer.";
+"Another installed app uses a matching identifier; this may be its data." = "Another installed app uses a matching identifier; this may be its data.";
+"Background service labeled with the app's bundle identifier." = "Background service labeled with the app's bundle identifier.";
+"Background service that runs a program inside the app." = "Background service that runs a program inside the app.";
+"Privileged helper installed for the app." = "Privileged helper installed for the app.";
+"Installed by the app's installer package." = "Installed by the app's installer package.";
+
+// Inspecting findings
+"Show in Finder" = "Show in Finder";
+"Copy Path" = "Copy Path";
+"This item no longer exists." = "This item no longer exists.";
+"OK" = "OK";
+"Sort by" = "Sort by";
+"Size" = "Size";
+"Name" = "Name";
+
+// Completion reports
+"Uninstall partly finished" = "Uninstall partly finished";
+"Uninstall failed" = "Uninstall failed";
+"Cleanup partly finished" = "Cleanup partly finished";
+"Cleanup failed" = "Cleanup failed";
+"Deleted files totaling %@ (%lld items)" = "Deleted files totaling %@ (%lld items)";
+"Disk space is freed when you empty the Trash." = "Disk space is freed when you empty the Trash.";
+"Free space may take a while to update because of APFS local snapshots." = "Free space may take a while to update because of APFS local snapshots.";
+"Not removed: %lld items" = "Not removed: %lld items";
+"DiskSift only removes items inside known Library locations." = "DiskSift only removes items inside known Library locations.";
+"Remove it in Finder with an administrator account if you no longer need it." = "Remove it in Finder with an administrator account if you no longer need it.";
+"Grant Full Disk Access in System Settings, then try again." = "Grant Full Disk Access in System Settings, then try again.";
+"Quit the app that uses it, then try again." = "Quit the app that uses it, then try again.";
+"Fix the problem with the application above, then uninstall again." = "Fix the problem with the application above, then uninstall again.";
+
+// Accessibility
+"Selected" = "Selected";
+"Partly selected" = "Partly selected";
+"Not selected" = "Not selected";

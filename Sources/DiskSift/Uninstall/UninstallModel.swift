@@ -74,6 +74,13 @@ final class UninstallModel {
     private(set) var groups: [FindingGroup] = []
     private(set) var checked: Set<String> = []
     var isTargeted = false
+    /// Bundle size of the selected app; nil while unknown.
+    private(set) var appSize: Int64?
+    var sort: ResultSort = .size
+    var showsDetails = false
+    /// Set when "Show in Finder" hit an item that no longer exists.
+    var missingItem: URL?
+    let paths: SiftPaths
     private(set) var isStopping = false
     private(set) var removalProgress: RemovalProgressState?
     private var removalTask: Task<RemovalReport, Never>?
@@ -85,12 +92,20 @@ final class UninstallModel {
     private let terminator: any ProcessTerminating
     private let quitTimeout: Duration
     private let pollInterval: Duration
+    private let sizer: @Sendable (URL) async -> Int64?
+    private let revealer: any FileRevealing
 
     init(
         validator: any AppValidating, scanner: any LeftoverScanning, uninstaller: any AppUninstalling,
         runningApps: any RunningApps, terminator: any ProcessTerminating,
-        quitTimeout: Duration = .seconds(5), pollInterval: Duration = .milliseconds(200)
+        quitTimeout: Duration = .seconds(5), pollInterval: Duration = .milliseconds(200),
+        paths: SiftPaths = .live,
+        sizer: @escaping @Sendable (URL) async -> Int64? = { try? await DirectorySizer.size(of: $0).bytes },
+        revealer: any FileRevealing = LiveFileRevealer()
     ) {
+        self.paths = paths
+        self.sizer = sizer
+        self.revealer = revealer
         self.validator = validator
         self.scanner = scanner
         self.uninstaller = uninstaller
@@ -110,13 +125,22 @@ final class UninstallModel {
             validator: AppValidator(paths: paths),
             scanner: LeftoverScanner(sources: sources, paths: paths),
             uninstaller: Uninstaller(remover: Remover(roots: .make(paths)), runner: runner),
-            runningApps: LiveRunningApps(), terminator: LiveProcessTerminator())
+            runningApps: LiveRunningApps(), terminator: LiveProcessTerminator(), paths: paths)
     }
 
-    // MARK: drop and validation
+    // MARK: selection of the app (drop or file picker)
+
+    /// Both entry points accept a new app only while nothing else is in progress.
+    var canChooseApp: Bool { phase == .idle }
 
     func drop(_ urls: [URL]) async {
-        guard phase == .idle, let url = urls.first else { return }
+        guard let url = urls.first else { return }
+        await select(url)
+    }
+
+    /// Validates and, if the app is running, asks to quit it; then scans. Same path for drop and picker.
+    func select(_ url: URL) async {
+        guard phase == .idle else { return }
         errorKey = nil
         phase = .validating
         let info: AppInfo
@@ -177,8 +201,11 @@ final class UninstallModel {
     private func scan() async {
         guard let app else { return }
         phase = .scanning
+        let sizer = sizer
+        async let bundleSize = sizer(app.url)
         do {
             let findings = try await scanner.scan(app)
+            appSize = await bundleSize
             groups = FindingGroup.group(findings)
             checked = Set(findings.filter(LeftoverScanner.defaultChecked).map(\.id))
             phase = .results
@@ -200,6 +227,36 @@ final class UninstallModel {
 
     /// Selected leftovers only; the app itself is always trashed.
     var selectedTotal: Int64 { selectedFindings.reduce(0) { $0 + ($1.size ?? 0) } }
+
+    /// All related files found (leftovers live outside the bundle, so nothing is counted twice).
+    var leftoversTotal: Int64 { groups.reduce(0) { $0 + $1.totalSize } }
+
+    var leftoversCount: Int { groups.reduce(0) { $0 + $1.findings.count } }
+
+    /// What "Move to Trash" moves: the app plus the selected leftovers.
+    var totalToTrash: Int64 { (appSize ?? 0) + selectedTotal }
+
+    /// Groups by readable kind (Application Support, Caches, …), user locations before system ones.
+    var orderedGroups: [FindingGroup] {
+        let order = Dictionary(uniqueKeysWithValues: LocationKind.allCases.enumerated().map { ($1, $0) })
+        return groups.sorted { lhs, rhs in
+            let l = (order[kind(of: lhs)] ?? 0, isSystem(lhs) ? 1 : 0)
+            let r = (order[kind(of: rhs)] ?? 0, isSystem(rhs) ? 1 : 0)
+            return l != r ? l < r : lhs.parent.path < rhs.parent.path
+        }
+    }
+
+    func kind(of group: FindingGroup) -> LocationKind { LocationKind.of(group.parent, paths: paths) }
+
+    func isSystem(_ group: FindingGroup) -> Bool { LocationKind.isSystem(group.parent, paths: paths) }
+
+    func sortedFindings(_ group: FindingGroup) -> [Finding] {
+        sort.sorted(group.findings, size: { $0.size ?? 0 }, name: { $0.url.lastPathComponent })
+    }
+
+    func reveal(_ url: URL) {
+        if !revealer.reveal(url) { missingItem = url }
+    }
 
     // MARK: removal
 
@@ -238,6 +295,8 @@ final class UninstallModel {
         removalProgress = nil
         phase = .idle
         app = nil
+        appSize = nil
+        showsDetails = false
         groups = []
         checked = []
     }

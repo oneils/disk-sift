@@ -11,6 +11,7 @@ struct DiskSiftApp: App {
         WindowGroup("DiskSift") {
             ContentView(model: shell)
         }
+        .defaultSize(width: 900, height: 620)
     }
 
     /// True when the executable lives inside an `.app` bundle (false for `swift run`).

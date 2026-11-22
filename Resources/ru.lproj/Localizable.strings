@@ -27,12 +27,9 @@
 "Applications from /Applications or ~/Applications" = "Приложения из /Applications или ~/Applications";
 "Selected: %@" = "Выбрано: %@";
 "Move to Trash" = "В Корзину";
-"Needs admin" = "Нужен администратор";
 "Low" = "Низкая";
 "Medium" = "Средняя";
 "High" = "Высокая";
-"Removed: %lld items, %@" = "Удалено: %lld, %@";
-"Skipped: %lld items" = "Пропущено: %lld";
 "Done" = "Готово";
 "Outside the allowed locations" = "Вне разрешённых расположений";
 "Needs administrator rights" = "Нужны права администратора";
@@ -53,7 +50,6 @@
 "Stopped: %lld items not removed" = "Остановлено: не удалено элементов: %lld";
 "Scanning: %lld of %lld done" = "Сканирование: готово %lld из %lld";
 "Stop" = "Стоп";
-"Scan" = "Сканировать";
 "User caches and logs" = "Кэши и логи пользователя";
 "Developer caches" = "Кэши разработчика";
 
@@ -62,6 +58,99 @@
 "Stopping after current item…" = "Остановка после текущего объекта…";
 "Stopping does not undo items already removed." = "Остановка не восстанавливает уже удалённые объекты.";
 "Moved to Trash: %lld items, %@" = "Перемещено в Корзину: %lld объектов, %@";
-"Deleted: %lld items, %@" = "Удалено: %lld объектов, %@";
 "Deleting: %@" = "Удаление: %@";
 "%lld of %lld done • %@ deleted" = "Готово %lld из %lld • Удалено: %@";
+
+// Start states and choosing an app
+"Choose Application…" = "Выбрать приложение…";
+"Choose Another Application…" = "Выбрать другое приложение…";
+"Choose" = "Выбрать";
+"Choose an application to uninstall" = "Выберите приложение для удаления";
+"or" = "или";
+"Find junk files" = "Поиск мусора";
+"DiskSift checks your user caches and logs (~/Library/Caches, ~/Library/Logs) and developer caches: Xcode, CoreSimulator, Homebrew, npm, pip, Cargo and Go. System-wide caches are not scanned." = "DiskSift сканирует кэши и логи пользователя (~/Library/Caches, ~/Library/Logs) и кэши разработчика: Xcode, CoreSimulator, Homebrew, npm, pip, Cargo и Go. Общесистемные кэши не сканируются.";
+"Start Scan" = "Начать сканирование";
+"Scan Again" = "Сканировать снова";
+"No junk found" = "Мусор не найден";
+"The scanned locations contain nothing to clean." = "В просканированных расположениях нечего очищать.";
+"Waiting…" = "Ожидание…";
+"Incomplete" = "Не завершено";
+"The scan was stopped. Categories marked Incomplete were not fully scanned." = "Сканирование остановлено. Категории с пометкой «Не завершено» просканированы не полностью.";
+"Found %@ in %lld items" = "Найдено %@ (объектов: %lld)";
+"Found data only, not total disk usage or guaranteed free space." = "Только найденные данные — это не занятое место на диске и не гарантированный объём освобождаемого места.";
+"Found data only (incomplete scan), not total disk usage or guaranteed free space." = "Только найденные данные (сканирование не завершено) — это не занятое место на диске и не гарантированный объём освобождаемого места.";
+"Apps recreate caches as needed; the next launch may be slower. Nothing is selected by default." = "Приложения при необходимости создают кэши заново; следующий запуск может быть медленнее. По умолчанию ничего не выбрано.";
+"Build products and package caches; rebuilt or downloaded again when needed." = "Результаты сборки и кэши пакетов; при необходимости собираются или загружаются заново.";
+"Contains debug symbols needed to read crash reports. Not selected by default." = "Содержит отладочные символы, нужные для чтения отчётов о сбоях. По умолчанию не выбрано.";
+"Rebuilt on the next build." = "Создаётся заново при следующей сборке.";
+"Downloaded again when a device is connected." = "Загружается заново при подключении устройства.";
+"Some contents could not be read; the size may be incomplete." = "Часть содержимого не удалось прочитать; размер может быть неполным.";
+"Needs administrator rights; DiskSift will not remove it." = "Нужны права администратора; DiskSift не будет это удалять.";
+
+// Uninstall summary and grouping
+"Version %@" = "Версия %@";
+"Application %@ • Related files %@ in %lld items" = "Приложение %@ • Связанные файлы %@ (объектов: %lld)";
+"Details" = "Подробности";
+"Location" = "Расположение";
+"Bundle ID" = "Bundle ID";
+"Team ID" = "Team ID";
+"Not signed by a registered developer" = "Не подписано зарегистрированным разработчиком";
+"Related files" = "Связанные файлы";
+"No related files were found. Only the application will be moved to the Trash." = "Связанные файлы не найдены. В Корзину будет перемещено только приложение.";
+"Total to move to Trash: %@" = "Всего в Корзину: %@";
+"Application %@ + selected files %@" = "Приложение %@ + выбранные файлы %@";
+"(all users)" = "(все пользователи)";
+"Application Support" = "Данные приложений";
+"Caches" = "Кэши";
+"Preferences" = "Настройки";
+"Containers" = "Контейнеры";
+"Group Containers" = "Групповые контейнеры";
+"Saved Application State" = "Сохранённое состояние";
+"Logs" = "Логи";
+"Web Data and Cookies" = "Веб-данные и cookie";
+"Login Services" = "Службы входа";
+"Application Scripts" = "Сценарии приложений";
+"Autosave Information" = "Автосохранение";
+"Other" = "Другое";
+"Shared data: other apps may use it." = "Общие данные: их могут использовать другие приложения.";
+"Strong match: selected by default." = "Надёжное совпадение: выбрано по умолчанию.";
+"Possible match: review before removing." = "Возможное совпадение: проверьте перед удалением.";
+"Weak match: not selected by default. Review before removing." = "Слабое совпадение: по умолчанию не выбрано. Проверьте перед удалением.";
+"Named after the app's bundle identifier." = "Названо по bundle identifier приложения.";
+"Matched only by the app's name; it may belong to another app." = "Совпадает только по имени приложения; может принадлежать другому приложению.";
+"App group container listed in the app's signature." = "Контейнер группы приложений, указанный в подписи приложения.";
+"Matched only by the developer's Team ID; it may belong to another app from that developer." = "Совпадает только по Team ID разработчика; может принадлежать другому приложению этого разработчика.";
+"Another installed app uses a matching identifier; this may be its data." = "Другое установленное приложение использует похожий идентификатор; это могут быть его данные.";
+"Background service labeled with the app's bundle identifier." = "Фоновая служба с bundle identifier приложения.";
+"Background service that runs a program inside the app." = "Фоновая служба, запускающая файл из приложения.";
+"Privileged helper installed for the app." = "Привилегированный помощник, установленный для приложения.";
+"Installed by the app's installer package." = "Установлено пакетом установщика приложения.";
+
+// Inspecting findings
+"Show in Finder" = "Показать в Finder";
+"Copy Path" = "Скопировать путь";
+"This item no longer exists." = "Этот объект больше не существует.";
+"OK" = "ОК";
+"Sort by" = "Сортировка";
+"Size" = "Размер";
+"Name" = "Имя";
+
+// Completion reports
+"Uninstall partly finished" = "Удаление завершено частично";
+"Uninstall failed" = "Удаление не выполнено";
+"Cleanup partly finished" = "Очистка завершена частично";
+"Cleanup failed" = "Очистка не выполнена";
+"Deleted files totaling %@ (%lld items)" = "Удалены файлы общим объёмом %@ (объектов: %lld)";
+"Disk space is freed when you empty the Trash." = "Место на диске освободится после очистки Корзины.";
+"Free space may take a while to update because of APFS local snapshots." = "Свободное место может обновиться не сразу из-за локальных снимков APFS.";
+"Not removed: %lld items" = "Не удалено объектов: %lld";
+"DiskSift only removes items inside known Library locations." = "DiskSift удаляет только объекты в известных папках Library.";
+"Remove it in Finder with an administrator account if you no longer need it." = "Если объект больше не нужен, удалите его в Finder с учётной записью администратора.";
+"Grant Full Disk Access in System Settings, then try again." = "Предоставьте полный доступ к диску в Системных настройках и повторите попытку.";
+"Quit the app that uses it, then try again." = "Закройте приложение, которое его использует, и повторите попытку.";
+"Fix the problem with the application above, then uninstall again." = "Устраните проблему с приложением выше и повторите удаление.";
+
+// Accessibility
+"Selected" = "Выбрано";
+"Partly selected" = "Выбрано частично";
+"Not selected" = "Не выбрано";

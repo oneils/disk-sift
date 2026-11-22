@@ -49,6 +49,7 @@ struct ContentView: View {
                     JunkView(model: model.junk)
                 }
             }
+            .navigationTitle(LocalizedStringKey((model.selection ?? .uninstall).rawValue))
         }
         .frame(minWidth: 640, minHeight: 420)
         .onAppear { model.refreshFDA() }

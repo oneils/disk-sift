@@ -33,34 +33,38 @@ public struct LibraryPathsSource: LeftoverSource {
             let names = (try? FileManager.default.contentsOfDirectory(atPath: dirPath))?.sorted() ?? []
             for name in names {
                 let isGroup = dirPath == groupsPath
-                guard let confidence = match(name, isGroupContainer: isGroup, app: app, ids: ids) else { continue }
+                guard let (confidence, evidence) = match(name, isGroupContainer: isGroup, app: app, ids: ids)
+                else { continue }
                 let url = dir.appendingPathComponent(name)
                 result.append(
                     Finding(
                         url: url, confidence: confidence,
                         sources: [isGroup && confidence == .high ? .groupContainer : .libraryPath],
-                        requiresRoot: !Writability.canRemove(url, policy: .trash)))
+                        requiresRoot: !Writability.canRemove(url, policy: .trash), evidence: evidence))
             }
         }
         return result
     }
 
-    private func match(_ name: String, isGroupContainer: Bool, app: AppInfo, ids: [String]) -> Confidence? {
+    private func match(
+        _ name: String, isGroupContainer: Bool, app: AppInfo, ids: [String]
+    ) -> (Confidence, Set<MatchEvidence>)? {
         if isGroupContainer {
             if app.signing.appGroups.contains(where: { $0.caseInsensitiveCompare(name) == .orderedSame }) {
-                return .high
+                return (.high, [.appGroup])
             }
             if let team = app.signing.teamID, name.lowercased().hasPrefix(team.lowercased() + ".") {
-                return .low
+                return (.low, [.teamPrefix])
             }
         }
         let stripped = Self.strippedName(name)
         let lower = stripped.lowercased()
         if let id = ids.first(where: { Self.matches(lower, id: $0.lowercased()) }) {
-            return isOtherAppsData(lower, ownID: id.lowercased(), app: app) ? .low : .high
+            return isOtherAppsData(lower, ownID: id.lowercased(), app: app)
+                ? (.low, [.bundleIDName, .otherAppInstalled]) : (.high, [.bundleIDName])
         }
         if stripped.count >= 4 && lower == app.name.lowercased() {
-            return .low
+            return (.low, [.appName])
         }
         return nil
     }

@@ -48,7 +48,7 @@ public struct PkgReceiptsSource: LeftoverSource {
                 let url = URL(fileURLWithPath: path)
                 found[path] = Finding(
                     url: url, confidence: .low, sources: [.pkgReceipt],
-                    requiresRoot: !Writability.canRemove(url, policy: .trash))
+                    requiresRoot: !Writability.canRemove(url, policy: .trash), evidence: [.pkgReceipt])
             }
         }
         return found.values.sorted { $0.url.path < $1.url.path }

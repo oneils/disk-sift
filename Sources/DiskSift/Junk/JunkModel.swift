@@ -40,6 +40,8 @@ final class JunkModel {
         case pending
         case scanning
         case done
+        /// The scan was stopped before this category finished; its findings are incomplete.
+        case stopped
     }
 
     struct Row: Identifiable, Equatable {
@@ -89,12 +91,19 @@ final class JunkModel {
     /// Findings known to be regular files (nothing to expand).
     private var plainFiles: Set<String> = []
     var confirming = false
+    /// The last scan was stopped before every category finished.
+    private(set) var scanStopped = false
+    var sort: ResultSort = .size
+    /// Set when "Show in Finder" hit an item that no longer exists.
+    var missingItem: URL?
 
     private let scanner: any JunkScanning
     private let remover: any FindingRemoving
     private let categories: [any JunkCategory]
     private let runningApps: any RunningApps
     private let lister: any ChildListing
+    private let revealer: any FileRevealing
+    let paths: SiftPaths
     private(set) var isStopping = false
     private(set) var deletingProgress: RemovalProgressState?
     private var scanTask: Task<Void, Never>?
@@ -102,9 +111,12 @@ final class JunkModel {
 
     init(
         scanner: any JunkScanning, remover: any FindingRemoving, categories: [any JunkCategory],
-        runningApps: any RunningApps, lister: any ChildListing = LiveChildLister()
+        runningApps: any RunningApps, lister: any ChildListing = LiveChildLister(),
+        revealer: any FileRevealing = LiveFileRevealer(), paths: SiftPaths = .live
     ) {
+        self.paths = paths
         self.lister = lister
+        self.revealer = revealer
         self.scanner = scanner
         self.remover = remover
         self.categories = categories
@@ -116,7 +128,8 @@ final class JunkModel {
         let categories: [any JunkCategory] = [UserCachesCategory(), DevJunkCategory()]
         return JunkModel(
             scanner: JunkScanner(categories: categories, paths: paths),
-            remover: Remover(roots: .make(paths)), categories: categories, runningApps: LiveRunningApps())
+            remover: Remover(roots: .make(paths)), categories: categories, runningApps: LiveRunningApps(),
+            paths: paths)
     }
 
     // MARK: scan
@@ -145,6 +158,7 @@ final class JunkModel {
     func scan() async {
         guard phase == .idle || phase == .ready else { return }
         phase = .scanning
+        scanStopped = false
         rows = categories.map { Row(id: $0.id, title: $0.title) }
         checked = []
         resetTree()
@@ -153,7 +167,16 @@ final class JunkModel {
         for await event in scanner.scan() {
             apply(event, running: running)
         }
-        for index in rows.indices where rows[index].state == .scanning { rows[index].state = .done }
+        // the stream ends early only when cancelled; unfinished categories are then incomplete, not empty
+        let cancelled = Task.isCancelled
+        for index in rows.indices where rows[index].state != .done {
+            if cancelled {
+                rows[index].state = .stopped
+            } else if rows[index].state == .scanning {
+                rows[index].state = .done
+            }
+        }
+        scanStopped = cancelled && rows.contains { $0.state == .stopped }
         phase = .ready
     }
 
@@ -184,6 +207,33 @@ final class JunkModel {
 
     /// Categories finished or in progress, for the progress line.
     var finishedCount: Int { rows.filter { $0.state == .done }.count }
+
+    /// A scan has run (or is running); before that nothing is known about any location.
+    var hasScanned: Bool { phase != .idle }
+
+    /// Everything found, across categories (they never overlap).
+    var foundTotal: Int64 { rows.reduce(0) { $0 + $1.total } }
+
+    var foundCount: Int { rows.reduce(0) { $0 + $1.findings.count } }
+
+    /// A complete scan found nothing.
+    var foundNothing: Bool { phase == .ready && !scanStopped && foundCount == 0 }
+
+    /// Findings of a row in the current sort order.
+    func sortedFindings(_ row: Row) -> [Finding] {
+        sort.sorted(row.findings, size: { $0.size ?? 0 }, name: { $0.url.lastPathComponent })
+    }
+
+    /// Loaded children in the current sort order.
+    func sortedChildren(of id: String) -> [Node] {
+        sort.sorted(children(of: id), size: \.size, name: { $0.url.lastPathComponent })
+    }
+
+    // MARK: inspect
+
+    func reveal(_ url: URL) {
+        if !revealer.reveal(url) { missingItem = url }
+    }
 
     // MARK: tree
 
@@ -298,6 +348,14 @@ final class JunkModel {
         let items = selectable(row)
         return !items.isEmpty && items.allSatisfy { checked.contains($0.id) }
     }
+
+    /// Tri-state for a category: mixed when some (or part of some) findings are selected.
+    func categoryState(_ row: Row) -> CheckState {
+        if isCategoryChecked(row) { return .on }
+        return selectable(row).contains { state(of: $0.id) != .off } ? .mixed : .off
+    }
+
+    func hasSelectable(_ row: Row) -> Bool { !selectable(row).isEmpty }
 
     func setCategoryChecked(_ row: Row, _ on: Bool) {
         for finding in selectable(row) { setChecked(finding, on) }
