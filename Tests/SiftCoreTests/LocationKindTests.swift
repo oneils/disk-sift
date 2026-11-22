@@ -34,4 +34,19 @@ import Testing
         #expect(paths.displayPath(URL(fileURLWithPath: "/r/homework/x")) == "/r/homework/x")
         #expect(paths.displayPath(URL(fileURLWithPath: "/Library/Caches")) == "/Library/Caches")
     }
+
+    @Test func resolverMatchesOfAndNormalizesPaths() {
+        let paths = SiftPaths(root: URL(fileURLWithPath: "/r"))
+        let resolver = LocationKindResolver(paths: paths)
+        let lib = paths.library
+        #expect(resolver.kind(of: lib.appendingPathComponent("Caches")) == .caches)
+        #expect(resolver.kind(of: URL(fileURLWithPath: lib.path + "/CACHES")) == .caches)
+        #expect(resolver.kind(of: URL(fileURLWithPath: lib.path + "/Caches/")) == .caches)
+        #expect(resolver.kind(of: URL(fileURLWithPath: lib.path + "/Logs/../Caches")) == .caches)
+        #expect(resolver.kind(of: lib.appendingPathComponent("Caches/sub")) == .other)
+        for subdir in ScanLocations.userLibrarySubdirs {
+            let url = lib.appendingPathComponent(subdir)
+            #expect(resolver.kind(of: url) == LocationKind.of(url, paths: paths))
+        }
+    }
 }

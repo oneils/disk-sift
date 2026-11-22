@@ -180,4 +180,84 @@ private final class FakeOrphanRemover: OrphanRemoving {
         #expect(m.phase == .idle)
         #expect(m.groups.isEmpty)
     }
+
+    /// The kept totals always match what the raw selection says.
+    private func expectConsistent(_ m: OrphansModel, sourceLocation: SourceLocation = #_sourceLocation) {
+        let selected = m.groups.flatMap(\.findings).filter { m.isChecked($0) }
+        #expect(selected.allSatisfy { !$0.requiresRoot }, sourceLocation: sourceLocation)
+        #expect(m.selectedTotal == selected.reduce(0) { $0 + ($1.size ?? 0) }, sourceLocation: sourceLocation)
+        #expect(m.hasSelection == !selected.isEmpty, sourceLocation: sourceLocation)
+        for section in m.sortedGroups {
+            let on = section.selectableIDs.filter { m.isChecked(id: $0) }.count
+            let expected: JunkModel.CheckState =
+                on == 0 ? .off : (on == section.selectableIDs.count ? .on : .mixed)
+            #expect(m.groupState(section) == expected, sourceLocation: sourceLocation)
+            #expect(m.groupState(section.group) == expected, sourceLocation: sourceLocation)
+        }
+    }
+
+    @Test func keptTotalsFollowEverySelectionChange() async {
+        let remover = FakeOrphanRemover(skip: ["/l/Preferences/com.big.app.plist"])
+        let m = model(remover: remover)
+        await m.scan()
+        expectConsistent(m)
+        let big = m.groups[0]
+        m.setChecked(big.findings[0], true)
+        m.setChecked(big.findings[0], true)  // twice: counted once
+        expectConsistent(m)
+        m.setChecked(big.findings[2], true)  // root-only: ignored
+        expectConsistent(m)
+        m.setGroup(m.sortedGroups[1], true)
+        expectConsistent(m)
+        m.setGroup(big, true)
+        expectConsistent(m)
+        #expect(m.selectedTotal == 524)
+        m.setChecked(big.findings[1], false)
+        m.setChecked(big.findings[1], false)
+        expectConsistent(m)
+        m.setGroup(big, true)
+        await m.remove()
+        // removed items leave the selection; the skipped one stays selected
+        expectConsistent(m)
+        #expect(m.selectedTotal == 4)
+        m.closeReport()
+        await m.scan()
+        expectConsistent(m)
+        #expect(m.selectedTotal == 0)
+        m.setGroup(m.groups[0], true)
+        m.close()
+        expectConsistent(m)
+        #expect(!m.hasSelection)
+    }
+
+    @Test func rowsArePrecomputed() async {
+        let paths = SiftPaths(root: URL(fileURLWithPath: "/r"))
+        let caches = paths.library.appendingPathComponent("Caches/com.gone.app")
+        let group = OrphanGroup(id: "com.gone.app", findings: [finding(caches.path, "com.gone.app", 9)])
+        let m = OrphansModel(
+            scanner: FakeOrphanScanner(groups: [group]), remover: FakeOrphanRemover(), revealer: FakeRevealer(),
+            paths: paths)
+        await m.scan()
+        let row = m.sortedGroups[0].rows[0]
+        #expect(row.id == caches.path)
+        #expect(row.name == "com.gone.app")
+        #expect(row.kindKey == LocationKind.caches.titleKey)
+        #expect(row.parentPath == "~/Library/Caches")
+        #expect(row.evidenceKeys == row.finding.evidenceKeys)
+        #expect(m.sortedGroups[0].totalSize == 9)
+        #expect(m.sortedGroups[0].selectableIDs == [caches.path])
+    }
+
+    @Test func storedSortFollowsRemovalAndSortChanges() async {
+        let m = model()
+        await m.scan()
+        m.sort = .name
+        m.setGroup(m.groups[1], true)
+        await m.remove()
+        #expect(m.sortedGroups.map(\.id) == ["com.big.app"])
+        #expect(m.foundCount == 3)
+        #expect(m.foundTotal == 514)
+        m.sort = .size
+        #expect(m.sortedGroups.map(\.id) == ["com.big.app"])
+    }
 }
