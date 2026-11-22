@@ -49,7 +49,7 @@ User caches and logs start unchecked: pick what you want to delete. Developer ca
 
 Right-click any item for **Show in Finder** or **Copy Path**. When something can't be removed, the report says why and what to do next.
 
-Sizes are allocated sizes on disk. Because of APFS clones and local Time Machine snapshots, the space actually freed can be smaller. After a cleanup that deletes files, the report lists how many local snapshots the disk has and how old the oldest one is; macOS removes them on its own within 24 hours or when space runs low. DiskSift does not delete snapshots, since that needs administrator rights.
+Sizes are allocated sizes on disk. Because of APFS clones and local Time Machine snapshots, the space actually freed can be smaller. The Junk tab and the report after a cleanup that deletes files show how many local snapshots the disk has and how old the oldest one is; macOS removes them on its own within 24 hours or when space runs low. DiskSift does not delete snapshots, since that needs administrator rights.
 
 ## Safety
 

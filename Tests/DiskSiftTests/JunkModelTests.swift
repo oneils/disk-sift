@@ -537,18 +537,20 @@ final class FakeRevealer: FileRevealing {
             })
     }
 
-    @Test func snapshotsAreReadAfterDeletingPermanently() async {
+    @Test func snapshotsAreReadAfterScanAndAfterDeletingPermanently() async {
         let snapshot = LocalSnapshot(name: "com.apple.TimeMachine.2026-11-21-180637.local", date: nil)
         let reads = OSAllocatedUnfairLock(initialState: 0)
         let m = mixedModel(
             library: FakeRemover(), largeFiles: FakeRemover(), snapshots: [snapshot], snapshotReads: reads)
         await m.scan()
-        await m.remove()
-        #expect(m.lastSnapshots == [snapshot])
+        #expect(m.snapshots == [snapshot])
         #expect(reads.withLock { $0 } == 1)
+        await m.remove()
+        #expect(m.snapshots == [snapshot])
+        #expect(reads.withLock { $0 } == 2)
     }
 
-    @Test func snapshotsAreNotReadWhenEverythingWentToTheTrash() async {
+    @Test func snapshotsAreNotReReadWhenEverythingWentToTheTrash() async {
         let reads = OSAllocatedUnfairLock(initialState: 0)
         let m = mixedModel(
             library: FakeRemover(), largeFiles: FakeRemover(),
@@ -557,8 +559,8 @@ final class FakeRevealer: FileRevealing {
         m.setCategoryChecked(m.rows.first { $0.id == "del" }!, false)
         await m.remove()
         #expect(m.lastRemoved[.trash]?.count == 2)
-        #expect(m.lastSnapshots.isEmpty)
-        #expect(reads.withLock { $0 } == 0)
+        // read once by the scan, not again by a removal that only trashed
+        #expect(reads.withLock { $0 } == 1)
     }
 
     @Test func batchesRouteByScopeAndPolicy() async {

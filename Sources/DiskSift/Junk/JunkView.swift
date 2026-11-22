@@ -20,7 +20,7 @@ struct JunkView: View {
                 if case .report(let report) = model.phase {
                     ReportSheet(
                         report: report, context: .cleanup, paths: model.paths, reveal: { model.reveal($0) },
-                        removedByPolicy: model.lastRemoved, snapshots: model.lastSnapshots
+                        removedByPolicy: model.lastRemoved, snapshots: model.snapshots
                     ) {
                         model.closeReport()
                     }
@@ -151,8 +151,32 @@ struct JunkView: View {
                 }
                 .font(.callout)
             }
+            if let oldest = model.snapshots.first {
+                snapshotsLine(count: model.snapshots.count, oldest: oldest.date)
+            }
             DistributionBar(model: model)
         }
+    }
+
+    /// Why deleted space may show up late: local snapshots keep it until macOS removes them.
+    private func snapshotsLine(count: Int, oldest: Date?) -> some View {
+        Label {
+            if let oldest {
+                Text(
+                    "Time Machine local snapshots on this disk: \(count), the oldest from \(oldest.formatted(date: .abbreviated, time: .shortened))."
+                )
+            } else {
+                Text("Time Machine local snapshots on this disk: \(count).")
+            }
+        } icon: {
+            Image(systemName: "clock.arrow.circlepath").foregroundStyle(.secondary)
+        }
+        .font(.callout)
+        .foregroundStyle(.secondary)
+        .help(
+            Text(
+                "Deleted files keep using space until macOS removes these snapshots. It does so on its own within 24 hours, or sooner when the disk runs low on space."
+            ))
     }
 
     private var removingHeader: some View {
