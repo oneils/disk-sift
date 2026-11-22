@@ -1,0 +1,105 @@
+import Foundation
+
+/// How sure we are that a finding belongs to the app being uninstalled (or is safe junk).
+public enum Confidence: Int, Comparable, Sendable, CaseIterable {
+    case low
+    case medium
+    case high
+
+    public static func < (lhs: Confidence, rhs: Confidence) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
+}
+
+/// launchd domain a launch item lives in.
+public enum LaunchDomain: String, Hashable, Sendable {
+    /// `~/Library/LaunchAgents`, unloadable with `launchctl bootout gui/<uid>/<label>`.
+    case user
+    /// `/Library/LaunchAgents`, `/Library/LaunchDaemons`; root-only.
+    case system
+}
+
+/// Why a path was reported.
+public enum FindingSource: Hashable, Sendable {
+    case libraryPath
+    case groupContainer
+    case launchItem(label: String, domain: LaunchDomain)
+    case pkgReceipt
+    case junk(categoryID: String)
+}
+
+/// A file or directory found by a scanner.
+public struct Finding: Identifiable, Hashable, Sendable {
+    public var url: URL
+    /// Allocated bytes; `nil` until sized (or when sizing failed).
+    public var size: Int64?
+    public var confidence: Confidence
+    public var sources: Set<FindingSource>
+    /// The current user can't remove it; never attempted.
+    public var requiresRoot: Bool
+    /// Some of it couldn't be read (size is partial or unknown).
+    public var inaccessible: Bool
+
+    public var id: String { url.path }
+
+    public init(
+        url: URL, size: Int64? = nil, confidence: Confidence, sources: Set<FindingSource>,
+        requiresRoot: Bool = false, inaccessible: Bool = false
+    ) {
+        self.url = url
+        self.size = size
+        self.confidence = confidence
+        self.sources = sources
+        self.requiresRoot = requiresRoot
+        self.inaccessible = inaccessible
+    }
+}
+
+/// What happens to removed items.
+public enum RemovalPolicy: Sendable {
+    /// Move to the Trash (uninstall).
+    case trash
+    /// Delete permanently (junk).
+    case delete
+}
+
+/// Why an item was not removed.
+public enum SkipReason: Equatable, Sendable {
+    case outsideRoots
+    case needsAdmin
+    case permissionDenied
+    case inUse
+    case vanished
+    /// The app itself couldn't be trashed, so its leftovers were left alone.
+    case appNotRemoved
+}
+
+public struct RemovedItem: Equatable, Sendable {
+    public var url: URL
+    public var size: Int64?
+
+    public init(url: URL, size: Int64?) {
+        self.url = url
+        self.size = size
+    }
+}
+
+public struct SkippedItem: Equatable, Sendable {
+    public var url: URL
+    public var reason: SkipReason
+
+    public init(url: URL, reason: SkipReason) {
+        self.url = url
+        self.reason = reason
+    }
+}
+
+public struct RemovalReport: Equatable, Sendable {
+    public var removed: [RemovedItem]
+    public var skipped: [SkippedItem]
+
+    public init(removed: [RemovedItem] = [], skipped: [SkippedItem] = []) {
+        self.removed = removed
+        self.skipped = skipped
+    }
+}
