@@ -5,9 +5,16 @@ import SwiftUI
 enum Section: String, CaseIterable, Identifiable {
     case uninstall = "Uninstall"
     case junk = "Junk"
+    case largeFiles = "Large Files"
 
     var id: String { rawValue }
-    var icon: String { self == .uninstall ? "trash" : "sparkles" }
+    var icon: String {
+        switch self {
+        case .uninstall: "trash"
+        case .junk: "sparkles"
+        case .largeFiles: "doc.text.magnifyingglass"
+        }
+    }
 }
 
 /// Window-level state. An `@Observable` class instead of `@State`: the SwiftUI macro plugin
@@ -19,10 +26,14 @@ final class ShellModel {
     var fdaGranted = true
     let uninstall: UninstallModel
     let junk: JunkModel
+    let largeFiles: LargeFilesModel
 
-    init(uninstall: UninstallModel = .live(), junk: JunkModel = .live()) {
+    init(
+        uninstall: UninstallModel = .live(), junk: JunkModel = .live(), largeFiles: LargeFilesModel = .live()
+    ) {
         self.uninstall = uninstall
         self.junk = junk
+        self.largeFiles = largeFiles
     }
 
     func refreshFDA() {
@@ -47,6 +58,8 @@ struct ContentView: View {
                     UninstallView(model: model.uninstall)
                 case .junk:
                     JunkView(model: model.junk)
+                case .largeFiles:
+                    LargeFilesView(model: model.largeFiles)
                 }
             }
             .navigationTitle(LocalizedStringKey((model.selection ?? .uninstall).rawValue))

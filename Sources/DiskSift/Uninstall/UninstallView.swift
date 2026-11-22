@@ -27,7 +27,7 @@ struct UninstallView: View {
             .sheet(isPresented: reportBinding) {
                 if case .report(let report) = model.phase {
                     ReportSheet(
-                        report: report, policy: .trash, paths: model.paths, reveal: { model.reveal($0) }
+                        report: report, context: .uninstall, paths: model.paths, reveal: { model.reveal($0) }
                     ) {
                         model.reset()
                     }

@@ -142,11 +142,11 @@
 - Create: `Sources/SiftCore/LargeFiles/LargeFileScanner.swift`
 - Create: `Tests/SiftCoreTests/LargeFileScannerTests.swift`
 
-- [ ] implement the enumerator walk per Technical Details: min size, skip denied subtrees, package descendants and other volumes, no symlink following, hard links once, allocated size
-- [ ] emit `.found`, throttled `.progress`, `.unreadable`, `.finished`; stop on task cancellation
-- [ ] write tests: files above/below the minimum (use sparse-safe real files, e.g. `truncate` + write to allocate, or a small minimum for tests); files in denied dirs and inside packages not reported; symlink to a big file not reported; hard link reported once
-- [ ] write tests: unreadable directory (chmod 000) reported via `.unreadable` and scan continues; cancellation ends the stream
-- [ ] run `make test` - must pass before task 5
+- [x] implement the enumerator walk per Technical Details: min size, skip denied subtrees, package descendants and other volumes, no symlink following, hard links once, allocated size
+- [x] emit `.found`, throttled `.progress`, `.unreadable`, `.finished`; stop on task cancellation
+- [x] write tests: files above/below the minimum (use sparse-safe real files, e.g. `truncate` + write to allocate, or a small minimum for tests); files in denied dirs and inside packages not reported; symlink to a big file not reported; hard link reported once
+- [x] write tests: unreadable directory (chmod 000) reported via `.unreadable` and scan continues; cancellation ends the stream
+- [x] run `make test` - must pass before task 5
 
 ### Task 5: Last-used date lookup
 
@@ -154,10 +154,10 @@
 - Create: `Sources/SiftCore/LargeFiles/LastUsedLookup.swift`
 - Create: `Tests/SiftCoreTests/LastUsedLookupTests.swift`
 
-- [ ] add `LastUsedLookup` protocol and `SpotlightLastUsedLookup` (`MDItemCreateWithURL`, `kMDItemLastUsedDate`)
-- [ ] add a fake for tests in `Tests/SiftCoreTests/Fakes.swift`
-- [ ] write tests: live lookup on a fresh temp file doesn't crash and returns a `Date` or nil (no assertion on which, indexing state varies); fake returns configured dates
-- [ ] run `make test` - must pass before task 6
+- [x] add `LastUsedLookup` protocol and `SpotlightLastUsedLookup` (`MDItemCreateWithURL`, `kMDItemLastUsedDate`)
+- [x] add a fake for tests in `Tests/SiftCoreTests/Fakes.swift`
+- [x] write tests: live lookup on a fresh temp file doesn't crash and returns a `Date` or nil (no assertion on which, indexing state varies); fake returns configured dates
+- [x] run `make test` - must pass before task 6
 
 ### Task 6: `LargeFilesModel`
 
@@ -171,14 +171,14 @@
 - Create: `Tests/DiskSiftTests/LargeFilesModelTests.swift`
 - Modify: `Tests/DiskSiftTests/ReportOutcomeTests.swift`
 
-- [ ] implement phases, `files`, `threshold` + `visibleFiles`, `checked`, `sort: LargeFileSort`, `unreadable`, `scanStopped`, reveal/`missingItem`; inject `LastUsedLookup` and fill "Opened" dates off the main actor after each found file, falling back to modification date
-- [ ] `LargeFile` → `Finding` with `FindingSource.largeFile` (case added in Task 2)
-- [ ] introduce `ReportContext` (`.uninstall` / `.cleanup` / `.largeFiles`) in `ReportOutcome`/`ReportSheet`, update the two existing call sites (`UninstallView.swift`, `JunkView.swift`), neutral `outsideRoots` hint; en + ru strings
-- [ ] implement trashing via injected `FindingRemoving` (live: `Remover(roots: .largeFiles(paths), filesOnly: true)`), progress, stop after current item, report; remove trashed files from the list
-- [ ] write tests: start state; scan collects files; threshold filters without rescanning and hidden items leave the selection; nothing selected by default; sort keeps selection
-- [ ] write tests: stop during scan marks results incomplete; trash passes only selected visible files with `.trash`; partial report removes only removed files; missing item on reveal; "Opened" uses the fake lookup and falls back to "Modified" when it returns nil
-- [ ] write tests: `ReportContext.largeFiles` titles ("Large files moved to Trash" family, never "Uninstall"); existing uninstall/cleanup titles unchanged
-- [ ] run `make test` - must pass before task 7
+- [x] implement phases, `files`, `threshold` + `visibleFiles`, `checked`, `sort: LargeFileSort`, `unreadable`, `scanStopped`, reveal/`missingItem`; inject `LastUsedLookup` and fill "Opened" dates off the main actor after each found file, falling back to modification date
+- [x] `LargeFile` → `Finding` with `FindingSource.largeFile` (case added in Task 2)
+- [x] introduce `ReportContext` (`.uninstall` / `.cleanup` / `.largeFiles`) in `ReportOutcome`/`ReportSheet`, update the two existing call sites (`UninstallView.swift`, `JunkView.swift`), neutral `outsideRoots` hint; en + ru strings
+- [x] implement trashing via injected `FindingRemoving` (live: `Remover(roots: .largeFiles(paths), filesOnly: true)`), progress, stop after current item, report; remove trashed files from the list
+- [x] write tests: start state; scan collects files; threshold filters without rescanning and hidden items leave the selection; nothing selected by default; sort keeps selection
+- [x] write tests: stop during scan marks results incomplete; trash passes only selected visible files with `.trash`; partial report removes only removed files; missing item on reveal; "Opened" uses the fake lookup and falls back to "Modified" when it returns nil
+- [x] write tests: `ReportContext.largeFiles` titles ("Large files moved to Trash" family, never "Uninstall"); existing uninstall/cleanup titles unchanged
+- [x] run `make test` - must pass before task 7
 
 ### Task 7: Large Files view and sidebar entry
 
@@ -188,11 +188,13 @@
 - Modify: `Resources/en.lproj/Localizable.strings`
 - Modify: `Resources/ru.lproj/Localizable.strings`
 
-- [ ] add `Section.largeFiles` with symbol, `ShellModel.largeFiles`, detail switch
-- [ ] start screen (`EmptyStateView`): what is scanned, what is skipped, threshold picker, Start Scan; scanning header with count, current folder and Stop
-- [ ] results: summary (found count/total at threshold, incomplete warning, unreadable folders note), threshold + sort pickers, rows (checkbox, `NSWorkspace` icon, name, `~` path, "Opened …"/"Modified …", `SizeText`), context menu, footer "Selected: X" + Move to Trash, trashing header, `ReportSheet`
-- [ ] add en + ru strings (parity test covers keys)
-- [ ] run `make test` and `make lint` - must pass before task 8
+- [x] add `Section.largeFiles` with symbol, `ShellModel.largeFiles`, detail switch
+- [x] start screen (`EmptyStateView`): what is scanned, what is skipped, threshold picker, Start Scan; scanning header with count, current folder and Stop
+- [x] results: summary (found count/total at threshold, incomplete warning, unreadable folders note), threshold + sort pickers, rows (checkbox, `NSWorkspace` icon, name, `~` path, "Opened …"/"Modified …", `SizeText`), context menu, footer "Selected: X" + Move to Trash, trashing header, `ReportSheet`
+- [x] add en + ru strings (parity test covers keys)
+- [x] ➕ thresholds and the scanner minimum are decimal (100 MB = 100_000_000) so they display as round numbers with `ByteCountFormatter`
+- [x] ➕ `LargeFilesScope.shouldSkipDirectory` compares paths below home as strings (no `realpath` per directory) and avoids `standardizedFileURL`, which strips `/private`
+- [x] run `make test` and `make lint` - must pass before task 8
 
 ### PR 3: system junk
 

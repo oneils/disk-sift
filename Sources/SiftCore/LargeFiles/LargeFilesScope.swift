@@ -49,14 +49,23 @@ public struct LargeFilesScope: Sendable, Equatable {
         return !isOnHomeVolume(path.path)
     }
 
-    /// Whether the scanner should not descend into `directory` (its canonical path, as enumerated).
+    /// Whether the scanner should not descend into `directory`. Called once per directory of a walk
+    /// rooted at `home`, so paths already below the canonical home are compared as strings; anything
+    /// else is resolved first.
     public func shouldSkipDirectory(_ directory: URL, isPackage: Bool, device: dev_t?) -> Bool {
         if isPackage || Self.isOpaque(name: directory.lastPathComponent) { return true }
         if let homeDevice, let device, device != homeDevice { return true }
-        guard let canonical = try? CanonicalPath.of(directory) else { return true }
-        if canonical.path.lowercased() == home.path.lowercased() { return false }
-        guard canonical.isStrictlyInside(home) else { return true }
-        let first = canonical.path.split(separator: "/")[home.path.split(separator: "/").count]
+        // not standardizedFileURL: it strips /private and would break the comparison with the canonical home
+        var path = directory.path
+        let prefix = home.path.lowercased() + "/"
+        if path.lowercased() == home.path.lowercased() { return false }
+        if !path.lowercased().hasPrefix(prefix) {
+            guard let canonical = try? CanonicalPath.of(directory), canonical.isStrictlyInside(home) else {
+                return true
+            }
+            path = canonical.path
+        }
+        let first = path.dropFirst(prefix.count).split(separator: "/").first.map(String.init) ?? ""
         return Self.deniedHomeChildren.contains(first.lowercased())
     }
 

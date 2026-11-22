@@ -123,12 +123,14 @@ struct EmptyStateView<Actions: View>: View {
 
 struct ReportSheet: View {
     let report: RemovalReport
-    let policy: RemovalPolicy
+    let context: ReportContext
     let paths: SiftPaths
     let reveal: (URL) -> Void
     let onClose: () -> Void
 
-    private var outcome: ReportOutcome { ReportOutcome(report, policy: policy) }
+    private var outcome: ReportOutcome { ReportOutcome(report) }
+
+    private var policy: RemovalPolicy { context.policy }
 
     private var removedBytes: Int64 { report.removed.reduce(0) { $0 + ($1.size ?? 0) } }
 
@@ -140,7 +142,7 @@ struct ReportSheet: View {
                     .foregroundStyle(symbolColor)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(LocalizedStringKey(outcome.titleKey(policy: policy))).font(.title2)
+                    Text(LocalizedStringKey(outcome.titleKey(context: context))).font(.title2)
                     amountLine.font(.headline)
                 }
             }

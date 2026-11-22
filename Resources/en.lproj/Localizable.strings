@@ -160,3 +160,21 @@
 "Permanent deletion is not allowed here" = "Permanent deletion is not allowed here";
 "Only files can be moved to the Trash from this list; use Finder for folders and links." = "Only files can be moved to the Trash from this list; use Finder for folders and links.";
 "Items from this list can only be moved to the Trash." = "Items from this list can only be moved to the Trash.";
+
+// Large Files tab
+"Files moved to Trash" = "Files moved to Trash";
+"Some files moved to Trash" = "Some files moved to Trash";
+"Moving to Trash stopped" = "Moving to Trash stopped";
+"Files were not moved to Trash" = "Files were not moved to Trash";
+"Large Files" = "Large Files";
+"Find large files" = "Find large files";
+"DiskSift looks for large files in your home folder. It skips ~/Library, the Trash, ~/Applications, apps and media libraries, Git folders and other volumes. Files you select are moved to the Trash, never deleted." = "DiskSift looks for large files in your home folder. It skips ~/Library, the Trash, ~/Applications, apps and media libraries, Git folders and other volumes. Files you select are moved to the Trash, never deleted.";
+"Files over" = "Files over";
+"Scanning: %lld items checked" = "Scanning: %lld items checked";
+"Found %lld files, %@" = "Found %lld files, %@";
+"Date" = "Date";
+"The scan was stopped. The list is incomplete." = "The scan was stopped. The list is incomplete.";
+"%lld folders could not be read and were not scanned." = "%lld folders could not be read and were not scanned.";
+"No files over %@ were found." = "No files over %@ were found.";
+"Opened %@" = "Opened %@";
+"Modified %@" = "Modified %@";
