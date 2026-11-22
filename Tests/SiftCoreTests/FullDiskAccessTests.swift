@@ -17,8 +17,22 @@ import Testing
         #expect(!FullDiskAccess.isGranted(fx.paths))
     }
 
-    @Test func missingTCCDBIsDenied() throws {
+    // Recent macOS has no user TCC.db: a missing probe must not read as "denied".
+    @Test func missingTCCDBFallsBackToReadableSafariDir() throws {
         let fx = try Fixture()
+        try fx.mkdir("home/Library/Safari")
+        #expect(FullDiskAccess.isGranted(fx.paths))
+    }
+
+    @Test func missingTCCDBFallsBackToUnreadableSafariDir() throws {
+        let fx = try Fixture()
+        try fx.mkdir("home/Library/Safari")
+        try fx.chmod("home/Library/Safari", 0o000)
         #expect(!FullDiskAccess.isGranted(fx.paths))
+    }
+
+    @Test func noProbeExistsAssumesGranted() throws {
+        let fx = try Fixture()
+        #expect(FullDiskAccess.isGranted(fx.paths))
     }
 }
