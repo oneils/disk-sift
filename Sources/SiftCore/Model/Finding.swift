@@ -30,6 +30,8 @@ public enum FindingSource: Hashable, Sendable {
     case largeFile
     /// Left behind by an app that is no longer installed; `groupID` is that app's bundle ID (lowercased).
     case orphan(groupID: String)
+    /// A part of a Neural DSP plugin; `name` is the plugin's.
+    case plugin(name: String)
 }
 
 /// The concrete match behind a finding, so the UI can explain it instead of showing a bare confidence.
@@ -121,6 +123,8 @@ public enum SkipReason: Equatable, Sendable {
     case notAFile
     /// The removal scope doesn't allow this policy (permanent deletion in a Trash-only scope).
     case policyNotAllowed
+    /// The administrator step (password prompt) failed, so the item is still there.
+    case adminStepFailed
 }
 
 public struct RemovedItem: Equatable, Sendable {

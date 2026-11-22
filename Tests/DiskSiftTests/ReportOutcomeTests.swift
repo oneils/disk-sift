@@ -68,6 +68,11 @@ import Testing
         #expect(ReportOutcome.success.titleKey(context: .leftovers) == "Leftovers moved to Trash")
         #expect(ReportContext.leftovers.policy == .trash)
         #expect(ReportContext.cleanup.policy == .delete)
+        #expect(ReportContext.plugins.policy == .delete)
+        #expect(ReportOutcome.success.titleKey(context: .plugins) == "Plugins removed")
+        #expect(ReportOutcome.failed.titleKey(context: .plugins) == "Plugins were not removed")
+        #expect(SkipReason.adminStepFailed.titleKey == "Removing with administrator rights failed")
+        #expect(SkipReason.adminStepFailed.hintKey != nil)
     }
 
     @MainActor @Test func mixedReportShowsBothPolicies() {
