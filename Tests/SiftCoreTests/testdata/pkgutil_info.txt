@@ -1,0 +1,5 @@
+package-id: com.foo.bar.pkg.app
+version: 1.2.3
+volume: __VOLUME__
+location: __LOCATION__
+install-time: 1700000000
