@@ -1,0 +1,5 @@
+com.apple.pkg.CLTools_Executables
+com.foo.bar.pkg.app
+com.foo.bar.helper
+com.foo.barbaz.pkg
+com.other.thing
