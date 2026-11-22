@@ -1,0 +1,40 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: select xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+
+      - name: build and verify app
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          UNIVERSAL=1 make app check-app VERSION="$VERSION"
+
+      - name: package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ditto -c -k --keepParent build/DiskSift.app "DiskSift_${VERSION}.zip"
+          shasum -a 256 "DiskSift_${VERSION}.zip" > checksums.txt
+
+      - name: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          scripts/changelog.sh "$GITHUB_REF_NAME" > notes.md
+          gh release create "$GITHUB_REF_NAME" "DiskSift_${VERSION}.zip" checksums.txt \
+            --title "$GITHUB_REF_NAME" --notes-file notes.md
