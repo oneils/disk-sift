@@ -1,2 +1,6 @@
 /* App name shown in the main window title */
 "DiskSift" = "DiskSift";
+"Uninstall" = "Uninstall";
+"Junk" = "Junk";
+"Full Disk Access is not granted. Some leftovers can't be found without it." = "Full Disk Access is not granted. Some leftovers can't be found without it.";
+"Open Settings" = "Open Settings";

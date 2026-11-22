@@ -29,6 +29,7 @@ fi
 
 for lang in en ru; do
     [[ -f "$app/Contents/Resources/$lang.lproj/Localizable.strings" ]] || err "$lang.lproj/Localizable.strings missing"
+    [[ -f "$app/Contents/Resources/$lang.lproj/Localizable.stringsdict" ]] || err "$lang.lproj/Localizable.stringsdict missing"
 done
 
 exe="$app/Contents/MacOS/DiskSift"

@@ -5,10 +5,11 @@ import SwiftUI
 struct DiskSiftApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
+    private let shell = ShellModel()
+
     var body: some Scene {
         WindowGroup("DiskSift") {
-            Text("DiskSift")
-                .frame(minWidth: 640, minHeight: 420)
+            ContentView(model: shell)
         }
     }
 

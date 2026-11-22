@@ -1,0 +1,49 @@
+import AppKit
+import SiftCore
+import SwiftUI
+
+enum Section: String, CaseIterable, Identifiable {
+    case uninstall = "Uninstall"
+    case junk = "Junk"
+
+    var id: String { rawValue }
+    var icon: String { self == .uninstall ? "trash" : "sparkles" }
+}
+
+/// Window-level state. An `@Observable` class instead of `@State`: the SwiftUI macro plugin
+/// is missing from Command Line Tools-only toolchains.
+@Observable
+@MainActor
+final class ShellModel {
+    var selection: Section? = .uninstall
+    var fdaGranted = true
+
+    func refreshFDA() {
+        fdaGranted = FullDiskAccess.isGranted(.live)
+    }
+}
+
+struct ContentView: View {
+    @Bindable var model: ShellModel
+
+    var body: some View {
+        NavigationSplitView {
+            List(Section.allCases, selection: $model.selection) { section in
+                Label(LocalizedStringKey(section.rawValue), systemImage: section.icon).tag(section)
+            }
+            .navigationSplitViewColumnWidth(min: 140, ideal: 160)
+        } detail: {
+            VStack(spacing: 0) {
+                if !model.fdaGranted { FDABanner() }
+                // screens are added in later tasks
+                Text(LocalizedStringKey((model.selection ?? .uninstall).rawValue))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .frame(minWidth: 640, minHeight: 420)
+        .onAppear { model.refreshFDA() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            model.refreshFDA()
+        }
+    }
+}

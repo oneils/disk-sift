@@ -1,2 +1,6 @@
 /* App name shown in the main window title */
 "DiskSift" = "DiskSift";
+"Uninstall" = "Удаление";
+"Junk" = "Мусор";
+"Full Disk Access is not granted. Some leftovers can't be found without it." = "Полный доступ к диску не предоставлен. Без него часть остатков не найти.";
+"Open Settings" = "Открыть настройки";
