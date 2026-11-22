@@ -26,6 +26,8 @@ if [[ -z "$version" || "$version" == "__VERSION__" ]]; then
     err "CFBundleShortVersionString is '$version'"
 fi
 [[ "$(value CFBundleVersion)" == "$version" ]] || err "CFBundleVersion '$(value CFBundleVersion)' != '$version'"
+[[ "$(value CFBundleIconFile)" == "AppIcon.icns" ]] || err "CFBundleIconFile is '$(value CFBundleIconFile)'"
+[[ -s "$app/Contents/Resources/AppIcon.icns" ]] || err "AppIcon.icns missing or empty"
 
 for lang in en ru; do
     [[ -f "$app/Contents/Resources/$lang.lproj/Localizable.strings" ]] || err "$lang.lproj/Localizable.strings missing"
