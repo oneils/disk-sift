@@ -94,12 +94,40 @@ public struct SkippedItem: Equatable, Sendable {
     }
 }
 
+public struct RemovalProgressState: Equatable, Sendable {
+    public var current: Finding
+    public var completed: Int
+    public var total: Int
+    public var processedBytes: Int64
+
+    public init(current: Finding, completed: Int, total: Int, processedBytes: Int64) {
+        self.current = current
+        self.completed = completed
+        self.total = total
+        self.processedBytes = processedBytes
+    }
+}
+
+public enum RemovalProgress: Equatable, Sendable {
+    case step(RemovalProgressState)
+    case completed(report: RemovalReport)
+}
+
 public struct RemovalReport: Equatable, Sendable {
     public var removed: [RemovedItem]
     public var skipped: [SkippedItem]
+    public var unprocessed: [Finding]
+    public var stopped: Bool
 
-    public init(removed: [RemovedItem] = [], skipped: [SkippedItem] = []) {
+    public init(
+        removed: [RemovedItem] = [],
+        skipped: [SkippedItem] = [],
+        unprocessed: [Finding] = [],
+        stopped: Bool = false
+    ) {
         self.removed = removed
         self.skipped = skipped
+        self.unprocessed = unprocessed
+        self.stopped = stopped
     }
 }

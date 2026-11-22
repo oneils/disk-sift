@@ -180,4 +180,117 @@ final class FakeTrasher: Trasher, @unchecked Sendable {
         #expect(report.removed.map(\.url) == [free])
         #expect(FileManager.default.fileExists(atPath: locked.path))
     }
+
+    @Test func progressReportedPerItem() async throws {
+        let fx = try Fixture()
+        let file1 = try fx.write("home/Library/Caches/com.foo/1", "a")
+        let file2 = try fx.write("home/Library/Caches/com.foo/2", "bb")
+        let f1 = Finding(url: file1, size: 10, confidence: .high, sources: [.libraryPath])
+        let f2 = Finding(url: file2, size: 20, confidence: .high, sources: [.libraryPath])
+
+        let steps = OSAllocatedUnfairLock<[RemovalProgressState]>(initialState: [])
+        let report = await remover(fx).remove([f1, f2], policy: .delete) { state in
+            steps.withLock { $0.append(state) }
+        }
+
+        #expect(report.removed.count == 2)
+        #expect(!report.stopped)
+        #expect(report.unprocessed.isEmpty)
+        let recorded = steps.withLock { $0 }
+        #expect(recorded.count == 2)
+        #expect(recorded[0].completed == 0 && recorded[0].total == 2 && recorded[0].processedBytes == 0)
+        #expect(recorded[0].current.url == file1)
+        #expect(recorded[1].completed == 1 && recorded[1].total == 2 && recorded[1].processedBytes == 10)
+        #expect(recorded[1].current.url == file2)
+    }
+
+    @Test func stoppingLeavesRemainingUnprocessed() async throws {
+        let fx = try Fixture()
+        let file1 = try fx.write("home/Library/Caches/com.foo/1", "a")
+        let file2 = try fx.write("home/Library/Caches/com.foo/2", "b")
+        let f1 = Finding(url: file1, size: 10, confidence: .high, sources: [.libraryPath])
+        let f2 = Finding(url: file2, size: 20, confidence: .high, sources: [.libraryPath])
+
+        let rem = remover(fx)
+        let task = Task {
+            await rem.remove([f1, f2], policy: .delete) { state in
+                if state.completed == 0 {
+                    withUnsafeCurrentTask { $0?.cancel() }
+                }
+            }
+        }
+        let report = await task.value
+
+        #expect(report.removed.count == 1)
+        #expect(report.removed.first?.url == file1)
+        #expect(report.unprocessed == [f2])
+        #expect(report.stopped)
+        #expect(!FileManager.default.fileExists(atPath: file1.path))
+        #expect(FileManager.default.fileExists(atPath: file2.path))
+    }
+
+    @Test func removeStreamYieldsProgressAndCompletion() async throws {
+        let fx = try Fixture()
+        let file1 = try fx.write("home/Library/Caches/com.foo/1", "a")
+        let f1 = Finding(url: file1, size: 10, confidence: .high, sources: [.libraryPath])
+
+        var receivedStates: [RemovalProgressState] = []
+        var finalReport: RemovalReport?
+        for await event in remover(fx).removeStream([f1], policy: .delete) {
+            switch event {
+            case .step(let s): receivedStates.append(s)
+            case .completed(let r): finalReport = r
+            }
+        }
+        #expect(receivedStates.count == 1)
+        #expect(finalReport?.removed.count == 1)
+    }
+    @Test func cancelledBeforeStartLeavesEverythingUntouched() async throws {
+        let fx = try Fixture()
+        let file = try fx.write("home/Library/Caches/com.foo/file")
+        let item = finding(file)
+        let rem = remover(fx)
+        let task = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return await rem.remove([item], policy: .delete) { _ in
+                Issue.record("Cancelled removal must not start an item")
+            }
+        }
+        let report = await task.value
+        #expect(report.stopped)
+        #expect(report.unprocessed == [item])
+        #expect(report.removed.isEmpty && report.skipped.isEmpty)
+        #expect(FileManager.default.fileExists(atPath: file.path))
+    }
+
+    @Test func progressCountsFailuresButNotTheirBytes() async throws {
+        let fx = try Fixture()
+        let missing = finding(fx.paths.home.appendingPathComponent("Library/Caches/missing"))
+        let file = try fx.write("home/Library/Caches/com.foo/file")
+        let steps = OSAllocatedUnfairLock<[RemovalProgressState]>(initialState: [])
+        let report = await remover(fx).remove([missing, finding(file)], policy: .delete) { state in
+            steps.withLock { $0.append(state) }
+        }
+        #expect(report.skipped.map(\.reason) == [.vanished])
+        #expect(report.removed.map(\.url) == [file])
+        #expect(steps.withLock { $0.last?.completed } == 1)
+        #expect(steps.withLock { $0.last?.processedBytes } == 0)
+    }
+
+    @Test func stoppingDuringLastItemStillReportsCompletion() async throws {
+        let fx = try Fixture()
+        let file = try fx.write("home/Library/Caches/com.foo/file")
+        let rem = remover(fx)
+        let item = finding(file)
+        let task = Task {
+            await rem.remove([item], policy: .delete) { _ in
+                withUnsafeCurrentTask { $0?.cancel() }
+            }
+        }
+        let report = await task.value
+        #expect(report.removed.map(\.url) == [file])
+        #expect(!report.stopped)
+        #expect(report.unprocessed.isEmpty)
+    }
+
 }

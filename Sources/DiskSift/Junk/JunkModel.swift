@@ -6,6 +6,11 @@ protocol JunkScanning: Sendable {
 }
 
 protocol FindingRemoving: Sendable {
+    func remove(
+        _ findings: [Finding],
+        policy: RemovalPolicy,
+        onProgress: (@Sendable (RemovalProgressState) async -> Void)?
+    ) async -> RemovalReport
     func remove(_ findings: [Finding], policy: RemovalPolicy) -> RemovalReport
 }
 
@@ -90,7 +95,10 @@ final class JunkModel {
     private let categories: [any JunkCategory]
     private let runningApps: any RunningApps
     private let lister: any ChildListing
+    private(set) var isStopping = false
+    private(set) var deletingProgress: RemovalProgressState?
     private var scanTask: Task<Void, Never>?
+    private var removeTask: Task<RemovalReport, Never>?
 
     init(
         scanner: any JunkScanning, remover: any FindingRemoving, categories: [any JunkCategory],
@@ -118,9 +126,16 @@ final class JunkModel {
         scanTask = Task { await scan() }
     }
 
-    /// Cancels a running scan; what was found so far stays selectable.
+    /// Cancels a running scan or deletion; what was found or deleted so far stays.
     func stop() {
         scanTask?.cancel()
+        stopDelete()
+    }
+
+    func stopDelete() {
+        guard phase == .deleting else { return }
+        isStopping = true
+        removeTask?.cancel()
     }
 
     func waitForScan() async {
@@ -257,6 +272,7 @@ final class JunkModel {
 
     /// Sets an item and everything loaded below it, then refreshes its ancestors.
     func setChecked(id: String, _ on: Bool) {
+        guard phase != .deleting else { return }
         setSubtree(id, on)
         var parent = nodes[id]?.parentID
         while let current = parent, !current.isEmpty {
@@ -330,9 +346,22 @@ final class JunkModel {
         let items = selectedFindings
         guard !items.isEmpty else { return }
         phase = .deleting
+        isStopping = false
+        deletingProgress = nil
         let remover = remover
         // deleting large trees (DerivedData) must not block the main actor
-        let report = await Task.detached { remover.remove(items, policy: .delete) }.value
+        let task = Task.detached {
+            await remover.remove(items, policy: .delete) { state in
+                await MainActor.run {
+                    self.deletingProgress = state
+                }
+            }
+        }
+        removeTask = task
+        let report = await task.value
+        isStopping = false
+        removeTask = nil
+        deletingProgress = nil
         let gone = Set(report.removed.map { $0.url.standardizedFileURL.path })
         pruneRemoved(
             gone,

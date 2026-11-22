@@ -42,11 +42,12 @@ struct JunkScannerTests {
         let start = ContinuousClock.now
         let task = Task {
             var count = 0
-            for await _ in scanner.scan() { count += 1 }
+            for await _ in scanner.scan() {
+                count += 1
+                withUnsafeCurrentTask { $0?.cancel() }
+            }
             return count
         }
-        try await Task.sleep(for: .milliseconds(100))
-        task.cancel()
         let count = await task.value
         #expect(count == 1)
         #expect(ContinuousClock.now - start < .seconds(10))

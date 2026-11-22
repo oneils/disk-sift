@@ -45,8 +45,23 @@
 "Delete…" = "Delete…";
 "Files are deleted immediately, not moved to the Trash. On APFS the free space may take a while to show up because of local snapshots." = "Files are deleted immediately, not moved to the Trash. On APFS the free space may take a while to show up because of local snapshots.";
 "Cleanup finished" = "Cleanup finished";
+"Cleanup stopped" = "Cleanup stopped";
+"Uninstall stopped" = "Uninstall stopped";
+"Deleting…" = "Deleting…";
+"Moving to Trash: %@" = "Moving to Trash: %@";
+"%lld of %lld done • %@ moved to Trash" = "%lld of %lld done • %@ moved to Trash";
+"Stopped: %lld items not removed" = "Stopped: %lld items not removed";
 "Scanning: %lld of %lld done" = "Scanning: %lld of %lld done";
 "Stop" = "Stop";
 "Scan" = "Scan";
 "User caches and logs" = "User caches and logs";
 "Developer caches" = "Developer caches";
+
+// Removal progress and partial reports
+"Stop after current item" = "Stop after current item";
+"Stopping after current item…" = "Stopping after current item…";
+"Stopping does not undo items already removed." = "Stopping does not undo items already removed.";
+"Moved to Trash: %lld items, %@" = "Moved to Trash: %lld items, %@";
+"Deleted: %lld items, %@" = "Deleted: %lld items, %@";
+"Deleting: %@" = "Deleting: %@";
+"%lld of %lld done • %@ deleted" = "%lld of %lld done • %@ deleted";

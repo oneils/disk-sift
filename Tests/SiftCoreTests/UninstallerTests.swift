@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import os
 
 @testable import SiftCore
 
@@ -84,5 +85,136 @@ import Testing
         #expect(report.removed.map(\.url) == [s.app.url, s.cache.url])
         #expect(trasher.trashed == [s.app.url, s.cache.url])
         #expect(!FileManager.default.fileExists(atPath: s.app.url.path))
+    }
+
+    @Test func uninstallProgressAndStoppingAfterApp() async throws {
+        let s = try setup()
+        let runner = FakeCommandRunner(fallback: CommandResult(status: 0))
+        let trasher = FakeTrasher()
+        let inst = uninstaller(s, runner: runner, trasher: trasher)
+        let app = s.app
+        let cache = s.cache
+        let appURL = s.app.url
+        let cachePath = s.cache.url.path
+
+        let steps = OSAllocatedUnfairLock<[RemovalProgressState]>(initialState: [])
+
+        let task = Task {
+            await inst.uninstall(app, leftovers: [cache]) { state in
+                steps.withLock { $0.append(state) }
+                if state.completed == 0 {
+                    withUnsafeCurrentTask { $0?.cancel() }
+                }
+            }
+        }
+        let report = await task.value
+
+        #expect(trasher.trashed == [appURL])
+        #expect(report.removed.map { $0.url } == [appURL])
+        #expect(report.unprocessed.map { $0.url } == [cache.url])
+        #expect(report.stopped)
+        #expect(FileManager.default.fileExists(atPath: cachePath))
+    }
+
+    @Test func uninstallStoppingDuringLeftovers() async throws {
+        let s = try setup()
+        let runner = FakeCommandRunner(fallback: CommandResult(status: 0))
+        let trasher = FakeTrasher()
+        let inst = uninstaller(s, runner: runner, trasher: trasher)
+        let app = s.app
+        let agent = s.agent
+        let cache = s.cache
+        let appURL = s.app.url
+        let agentURL = s.agent.url
+        let cacheURL = s.cache.url
+
+        let task = Task {
+            await inst.uninstall(app, leftovers: [agent, cache]) { state in
+                // state.completed == 1 means app finished, agent is current
+                if state.completed == 1 {
+                    withUnsafeCurrentTask { $0?.cancel() }
+                }
+            }
+        }
+        let report = await task.value
+
+        #expect(trasher.trashed == [appURL, agentURL])
+        #expect(report.removed.map { $0.url } == [appURL, agentURL])
+        #expect(report.unprocessed.map { $0.url } == [cacheURL])
+        #expect(report.stopped)
+    }
+
+    @Test func uninstallStreamYieldsEvents() async throws {
+        let s = try setup()
+        let runner = FakeCommandRunner(fallback: CommandResult(status: 0))
+        let trasher = FakeTrasher()
+        let inst = uninstaller(s, runner: runner, trasher: trasher)
+
+        var states: [RemovalProgressState] = []
+        var finalReport: RemovalReport?
+        for await event in inst.uninstallStream(s.app, leftovers: [s.cache]) {
+            switch event {
+            case .step(let st): states.append(st)
+            case .completed(let rep): finalReport = rep
+            }
+        }
+
+        #expect(states.count == 2)
+        #expect(finalReport?.removed.count == 2)
+    }
+    @Test func cancelledBeforeStartDoesNotUnloadOrTrash() async throws {
+        let s = try setup()
+        let runner = FakeCommandRunner()
+        let trasher = FakeTrasher()
+        let inst = uninstaller(s, runner: runner, trasher: trasher)
+        let task = Task { [app = s.app, leftovers = [s.agent, s.cache]] in
+            withUnsafeCurrentTask { $0?.cancel() }
+            return await inst.uninstall(app, leftovers: leftovers)
+        }
+        let report = await task.value
+        #expect(runner.calls.isEmpty)
+        #expect(trasher.trashed.isEmpty)
+        #expect(report.unprocessed.map(\.url) == [s.app.url, s.agent.url, s.cache.url])
+        #expect(report.stopped)
+    }
+
+    @Test func stoppingDuringBootoutDoesNotUnloadNextAgentOrTrashApp() async throws {
+        let s = try setup()
+        let runner = CancellingRunner()
+        let trasher = FakeTrasher()
+        let inst = Uninstaller(remover: Remover(roots: .make(s.fx.paths), trasher: trasher), runner: runner)
+        var second = s.cache
+        second.sources = [.launchItem(label: "com.foo.second", domain: .user)]
+        let leftovers = [s.agent, second]
+        let task = Task { [app = s.app] in await inst.uninstall(app, leftovers: leftovers) }
+        let report = await task.value
+        #expect(runner.calls.withLock { $0 } == 1)
+        #expect(trasher.trashed.isEmpty)
+        #expect(report.stopped)
+        #expect(report.unprocessed.map(\.url) == [s.app.url, s.agent.url, s.cache.url])
+    }
+
+    @Test func appSizeIncludedInProgressAndReport() async throws {
+        let s = try setup()
+        let size = try await DirectorySizer.size(of: s.app.url).bytes
+        let steps = OSAllocatedUnfairLock<[RemovalProgressState]>(initialState: [])
+        let report = await uninstaller(s, runner: FakeCommandRunner(), trasher: FakeTrasher())
+            .uninstall(s.app, leftovers: [s.cache]) { state in
+                steps.withLock { $0.append(state) }
+            }
+        #expect(report.removed.first?.size == size)
+        #expect(steps.withLock { $0.last?.processedBytes } == size)
+        #expect(steps.withLock { $0.last?.completed } == 1)
+    }
+
+}
+
+private final class CancellingRunner: CommandRunner {
+    let calls = OSAllocatedUnfairLock(initialState: 0)
+
+    func run(_ exe: String, _ args: [String]) async throws -> CommandResult {
+        calls.withLock { $0 += 1 }
+        withUnsafeCurrentTask { $0?.cancel() }
+        return CommandResult(status: 0)
     }
 }

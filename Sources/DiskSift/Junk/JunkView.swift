@@ -31,6 +31,7 @@ struct JunkView: View {
                     }
                 }
             }
+            .disabled(model.phase == .deleting)
             footer
         }
         .confirmationDialog(
@@ -46,7 +47,11 @@ struct JunkView: View {
         }
         .sheet(isPresented: reportBinding) {
             if case .report(let report) = model.phase {
-                ReportSheet(report: report, title: "Cleanup finished") { model.closeReport() }
+                ReportSheet(
+                    report: report, policy: .delete, title: report.stopped ? "Cleanup stopped" : "Cleanup finished"
+                ) {
+                    model.closeReport()
+                }
             }
         }
     }
@@ -70,6 +75,34 @@ struct JunkView: View {
                 Text("Scanning: \(model.finishedCount) of \(model.rows.count) done")
                 Spacer()
                 Button("Stop") { model.stop() }
+            } else if model.phase == .deleting {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        ProgressView().controlSize(.small)
+                        if let p = model.deletingProgress {
+                            Text("Deleting: \(p.current.url.lastPathComponent)")
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                                .help(p.current.url.path)
+                        } else {
+                            Text("Deleting…")
+                        }
+                    }
+                    if let p = model.deletingProgress {
+                        Text("\(p.completed) of \(p.total) done • \(formatBytes(p.processedBytes)) deleted")
+                            .foregroundStyle(.secondary)
+                    }
+                    HStack {
+                        Spacer()
+                        Button(
+                            LocalizedStringKey(
+                                model.isStopping ? "Stopping after current item…" : "Stop after current item")
+                        ) {
+                            model.stopDelete()
+                        }
+                        .disabled(model.isStopping)
+                    }
+                }
             } else {
                 Spacer()
                 Button("Scan") { model.startScan() }
