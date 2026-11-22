@@ -112,6 +112,9 @@ final class JunkModel {
     private let runningApps: any RunningApps
     private let lister: any ChildListing
     private let revealer: any FileRevealing
+    /// Local snapshots of the startup disk (live: `tmutil`), read after a scan and after a removal that
+    /// deleted something.
+    private let listSnapshots: @Sendable () async -> [LocalSnapshot]
     let paths: SiftPaths
     private(set) var isStopping = false
     private(set) var removalProgress: RemovalProgressState?
@@ -122,9 +125,11 @@ final class JunkModel {
         scanner: any JunkScanning, remover: any FindingRemoving, largeFilesRemover: (any FindingRemoving)? = nil,
         categories: [any JunkCategory],
         runningApps: any RunningApps, lister: any ChildListing = LiveChildLister(),
-        revealer: any FileRevealing = LiveFileRevealer(), paths: SiftPaths = .live
+        revealer: any FileRevealing = LiveFileRevealer(), paths: SiftPaths = .live,
+        snapshots: @escaping @Sendable () async -> [LocalSnapshot] = { [] }
     ) {
         self.paths = paths
+        self.listSnapshots = snapshots
         self.lister = lister
         self.revealer = revealer
         self.scanner = scanner
@@ -145,7 +150,7 @@ final class JunkModel {
             scanner: JunkScanner(categories: categories, paths: paths),
             remover: Remover(roots: .make(paths)), largeFilesRemover: Remover(roots: .largeFiles(paths)),
             categories: categories, runningApps: LiveRunningApps(),
-            paths: paths)
+            paths: paths, snapshots: { await LocalSnapshots.list(runner: ProcessCommandRunner()) })
     }
 
     // MARK: scan
@@ -193,6 +198,7 @@ final class JunkModel {
             }
         }
         scanStopped = cancelled && rows.contains { $0.state == .stopped }
+        snapshots = await listSnapshots()
         phase = .ready
     }
 
@@ -462,6 +468,10 @@ final class JunkModel {
     /// What the last removal did per policy, for the report.
     private(set) var lastRemoved: [RemovalPolicy: [RemovedItem]] = [:]
 
+    /// Local snapshots of the startup disk as of the last scan, or the last removal that deleted something
+    /// permanently (they are why that space shows up late). Trash-only removals don't change them.
+    private(set) var snapshots: [LocalSnapshot] = []
+
     func requestRemove() {
         guard phase == .ready, !selectedFindings.isEmpty else { return }
         confirming = true
@@ -488,6 +498,7 @@ final class JunkModel {
         removeTask = nil
         removalProgress = nil
         lastRemoved = byPolicy
+        if !(byPolicy[.delete] ?? []).isEmpty { snapshots = await listSnapshots() }
         let gone = Set(report.removed.map { $0.url.standardizedFileURL.path })
         pruneRemoved(
             gone,

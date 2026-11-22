@@ -138,6 +138,9 @@
 "Deleted files totaling %@ (%lld items)" = "Deleted files totaling %@ (%lld items)";
 "Disk space is freed when you empty the Trash." = "Disk space is freed when you empty the Trash.";
 "Free space may take a while to update because of APFS local snapshots." = "Free space may take a while to update because of APFS local snapshots.";
+"Time Machine local snapshots on this disk: %lld, the oldest from %@." = "Time Machine local snapshots on this disk: %lld, the oldest from %@.";
+"Time Machine local snapshots on this disk: %lld." = "Time Machine local snapshots on this disk: %lld.";
+"Deleted files keep using space until macOS removes these snapshots. It does so on its own within 24 hours, or sooner when the disk runs low on space." = "Deleted files keep using space until macOS removes these snapshots. It does so on its own within 24 hours, or sooner when the disk runs low on space.";
 "Not removed: %lld items" = "Not removed: %lld items";
 "DiskSift only removes items in locations it allows for this action." = "DiskSift only removes items in locations it allows for this action.";
 "Remove it in Finder with an administrator account if you no longer need it." = "Remove it in Finder with an administrator account if you no longer need it.";
@@ -210,3 +213,7 @@
 "Leftovers of removed apps" = "Leftovers of removed apps";
 "Apps that are no longer installed left these items. Review them: nothing is selected." = "Apps that are no longer installed left these items. Review them: nothing is selected.";
 "Containers were not checked without Full Disk Access." = "Containers were not checked without Full Disk Access.";
+"Time Machine local snapshots" = "Time Machine local snapshots";
+"Keep the space of deleted files until macOS removes them, on its own within 24 hours or sooner when the disk runs low on space. Removing them needs administrator rights, so DiskSift only lists them." = "Keep the space of deleted files until macOS removes them, on its own within 24 hours or sooner when the disk runs low on space. Removing them needs administrator rights, so DiskSift only lists them.";
+"None" = "None";
+"Snapshots: %lld" = "Snapshots: %lld";

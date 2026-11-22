@@ -129,6 +129,8 @@ struct ReportSheet: View {
     /// Removed items per policy when one operation both deleted and trashed (Junk); nil means all
     /// items followed the context's policy.
     var removedByPolicy: [RemovalPolicy: [RemovedItem]]? = nil
+    /// Local snapshots of the disk, shown to explain why deleted space isn't free yet.
+    var snapshots: [LocalSnapshot] = []
     let onClose: () -> Void
 
     private var outcome: ReportOutcome { ReportOutcome(report) }
@@ -222,11 +224,29 @@ struct ReportSheet: View {
         }
     }
 
+    @ViewBuilder private func snapshotNote(count: Int, oldest: Date?) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if let oldest {
+                Text(
+                    "Time Machine local snapshots on this disk: \(count), the oldest from \(oldest.formatted(date: .abbreviated, time: .shortened))."
+                )
+            } else {
+                Text("Time Machine local snapshots on this disk: \(count).")
+            }
+            Text(
+                "Deleted files keep using space until macOS removes these snapshots. It does so on its own within 24 hours, or sooner when the disk runs low on space."
+            )
+        }
+        .help(snapshots.map(\.name).joined(separator: "\n"))
+    }
+
     @ViewBuilder private var noteLine: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(shownPolicies, id: \.self) { policy in
                 if policy == .trash {
                     Text("Disk space is freed when you empty the Trash.")
+                } else if let oldest = snapshots.first {
+                    snapshotNote(count: snapshots.count, oldest: oldest.date)
                 } else {
                     Text("Free space may take a while to update because of APFS local snapshots.")
                 }
