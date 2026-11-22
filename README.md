@@ -2,7 +2,7 @@
 
 A small native macOS app that uninstalls apps without leaving junk behind and cleans up caches you don't need.
 
-> **Status:** early development. Nothing to download yet; the v1 design and implementation plan are in [`docs/plans/20261122-disk-sift-v1.md`](docs/plans/20261122-disk-sift-v1.md).
+> **Status:** v1 is feature complete. Download a build from [Releases](../../releases) or build it yourself. The design and implementation plan are in [`docs/plans/20261122-disk-sift-v1.md`](docs/plans/20261122-disk-sift-v1.md).
 
 ## What it does
 
@@ -46,6 +46,8 @@ Swift 6 and the Xcode Command Line Tools are enough; Xcode itself is not require
 make test         # swift test
 make lint         # swift format lint
 make app          # builds build/DiskSift.app (ad-hoc signed)
+make check-app    # sanity-checks the bundle
+UNIVERSAL=1 make app   # arm64 + x86_64
 open build/DiskSift.app
 ```
 
@@ -53,7 +55,7 @@ macOS ties the Full Disk Access grant of an ad-hoc signed app to its exact build
 
 ## Install from releases
 
-Release builds will be attached to [GitHub Releases](../../releases) as a zip with `checksums.txt`. They are ad-hoc signed, not notarized, so macOS blocks the first launch (right-click → **Open** no longer helps on macOS 15 and later). Either remove the quarantine flag:
+Release builds (universal, arm64 + x86_64) are attached to [GitHub Releases](../../releases) as a zip with `checksums.txt`. They are ad-hoc signed, not notarized, so macOS blocks the first launch (right-click → **Open** no longer helps on macOS 15 and later). Either remove the quarantine flag:
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/DiskSift.app
