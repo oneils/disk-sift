@@ -40,3 +40,13 @@
 "In use" = "Используется";
 "Already gone" = "Уже удалено";
 "Left alone because the app could not be removed" = "Не тронуто: приложение не удалось удалить";
+"Delete %@ permanently?" = "Удалить %@ навсегда?";
+"Delete" = "Удалить";
+"Delete…" = "Удалить…";
+"Files are deleted immediately, not moved to the Trash. On APFS the free space may take a while to show up because of local snapshots." = "Файлы удаляются сразу, а не перемещаются в Корзину. На APFS свободное место может обновиться не сразу из-за локальных снимков.";
+"Cleanup finished" = "Очистка завершена";
+"Scanning: %lld of %lld done" = "Сканирование: готово %lld из %lld";
+"Stop" = "Стоп";
+"Scan" = "Сканировать";
+"User caches and logs" = "Кэши и логи пользователя";
+"Developer caches" = "Кэши разработчика";

@@ -40,3 +40,13 @@
 "In use" = "In use";
 "Already gone" = "Already gone";
 "Left alone because the app could not be removed" = "Left alone because the app could not be removed";
+"Delete %@ permanently?" = "Delete %@ permanently?";
+"Delete" = "Delete";
+"Delete…" = "Delete…";
+"Files are deleted immediately, not moved to the Trash. On APFS the free space may take a while to show up because of local snapshots." = "Files are deleted immediately, not moved to the Trash. On APFS the free space may take a while to show up because of local snapshots.";
+"Cleanup finished" = "Cleanup finished";
+"Scanning: %lld of %lld done" = "Scanning: %lld of %lld done";
+"Stop" = "Stop";
+"Scan" = "Scan";
+"User caches and logs" = "User caches and logs";
+"Developer caches" = "Developer caches";

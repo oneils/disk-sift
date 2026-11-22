@@ -18,9 +18,11 @@ final class ShellModel {
     var selection: Section? = .uninstall
     var fdaGranted = true
     let uninstall: UninstallModel
+    let junk: JunkModel
 
-    init(uninstall: UninstallModel = .live()) {
+    init(uninstall: UninstallModel = .live(), junk: JunkModel = .live()) {
         self.uninstall = uninstall
+        self.junk = junk
     }
 
     func refreshFDA() {
@@ -44,7 +46,7 @@ struct ContentView: View {
                 case .uninstall:
                     UninstallView(model: model.uninstall)
                 case .junk:
-                    Text("Junk").frame(maxWidth: .infinity, maxHeight: .infinity)
+                    JunkView(model: model.junk)
                 }
             }
         }
