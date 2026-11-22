@@ -49,6 +49,20 @@ private final class FakeRemover: FindingRemoving {
     }
 }
 
+private final class FakeLister: ChildListing {
+    let tree: [String: [DirectoryChild]]
+    let calls = OSAllocatedUnfairLock<[String]>(initialState: [])
+    init(_ tree: [String: [(String, Int64, DirectoryChild.Kind)]]) {
+        self.tree = tree.mapValues { items in
+            items.map { DirectoryChild(url: URL(fileURLWithPath: $0.0), kind: $0.2, size: $0.1) }
+        }
+    }
+    func children(of url: URL) async throws -> [DirectoryChild] {
+        calls.withLock { $0.append(url.path) }
+        return tree[url.path] ?? []
+    }
+}
+
 private struct NoApps: RunningApps {
     func running() -> [RunningApp] { [] }
 }
@@ -75,12 +89,25 @@ private struct NoApps: RunningApps {
     }
 
     fileprivate func model(
-        scanner: FakeScanner? = nil, remover: FakeRemover = FakeRemover()
+        scanner: FakeScanner? = nil, remover: FakeRemover = FakeRemover(), lister: FakeLister? = nil
     ) -> JunkModel {
         JunkModel(
             scanner: scanner ?? FakeScanner(events: events), remover: remover,
             categories: [FakeCategory(id: "a", title: "A"), FakeCategory(id: "b", title: "B")],
-            runningApps: NoApps())
+            runningApps: NoApps(), lister: lister ?? FakeLister([:]))
+    }
+
+    fileprivate var lister: FakeLister {
+        FakeLister([
+            "/c/big": [("/c/big/g1", 60, .directory), ("/c/big/g2", 40, .file)],
+            "/c/big/g1": [("/c/big/g1/x", 35, .file), ("/c/big/g1/y", 25, .file)],
+            "/c/keepme": [("/c/keepme/k1", 30, .file), ("/c/keepme/k2", 20, .file)],
+        ])
+    }
+
+    fileprivate func node(_ m: JunkModel, _ path: String) -> JunkModel.Node {
+        let f = m.rows.flatMap(\.findings).first { $0.id == path }!
+        return m.node(for: f, categoryID: "a")
     }
 
     @Test func progressAggregation() async {
@@ -162,5 +189,104 @@ private struct NoApps: RunningApps {
         for row in m.rows { m.setCategoryChecked(row, false) }
         m.requestDelete()
         #expect(!m.confirming)
+    }
+
+    @Test func expandLoadsChildrenLazilyLargestFirst() async {
+        let l = lister
+        let m = model(lister: l)
+        await m.scan()
+        #expect(l.calls.withLock { $0 }.isEmpty)
+        let big = node(m, "/c/big")
+        await m.expand(big)
+        #expect(l.calls.withLock { $0 } == ["/c/big"])
+        #expect(m.children(of: "/c/big").map(\.url.lastPathComponent) == ["g1", "g2"])
+        #expect(m.isExpanded("/c/big") && !m.isLoading("/c/big"))
+        await m.expand(big)
+        #expect(l.calls.withLock { $0 }.count == 1)
+        // depth limit: grandchildren are not expandable
+        let g1 = m.children(of: "/c/big")[0]
+        #expect(m.canExpand(g1))
+        await m.expand(g1)
+        #expect(!m.canExpand(m.children(of: "/c/big/g1")[0]))
+        #expect(!m.canExpand(g1, requiresRoot: true))
+    }
+
+    @Test func inheritedDefaultFollowsParent() async {
+        let m = model(lister: lister)
+        await m.scan()
+        await m.expand(node(m, "/c/big"))  // checked by default
+        await m.expand(node(m, "/c/keepme"))  // unchecked by default
+        #expect(m.children(of: "/c/big").allSatisfy { m.state(of: $0.id) == .on })
+        #expect(m.children(of: "/c/keepme").allSatisfy { m.state(of: $0.id) == .off })
+    }
+
+    @Test func triStatePropagation() async {
+        let m = model(lister: lister)
+        await m.scan()
+        await m.expand(node(m, "/c/big"))
+        await m.expand(m.children(of: "/c/big")[0])
+        m.setChecked(id: "/c/big/g1/x", false)
+        #expect(m.state(of: "/c/big/g1") == .mixed)
+        #expect(m.state(of: "/c/big") == .mixed)
+        m.setChecked(id: "/c/big/g1/y", false)
+        #expect(m.state(of: "/c/big/g1") == .off)
+        #expect(m.state(of: "/c/big") == .mixed)  // g2 still checked
+        m.setChecked(id: "/c/big/g2", false)
+        #expect(m.state(of: "/c/big") == .off)
+        m.setChecked(id: "/c/big", true)
+        #expect(m.state(of: "/c/big/g1/x") == .on && m.state(of: "/c/big/g2") == .on)
+        m.setChecked(id: "/c/big/g1/x", true)
+        m.setChecked(id: "/c/big/g1/y", true)
+        #expect(m.state(of: "/c/big") == .on)
+        m.setChecked(id: "/c/big", false)
+        #expect(m.state(of: "/c/big/g1/y") == .off)
+    }
+
+    @Test func totalsNeverDoubleCount() async {
+        let m = model(lister: lister)
+        await m.scan()
+        #expect(m.selectedTotal == 1110)
+        await m.expand(node(m, "/c/big"))
+        #expect(m.selectedTotal == 1110)
+        m.setChecked(id: "/c/big/g2", false)  // big is now mixed: only g1 (60) counts instead of 100
+        #expect(m.selectedTotal == 1070)
+        #expect(m.selectedTotal(in: m.rows[0]) == 70)
+        #expect(Set(m.selectedFindings.map(\.id)) == ["/c/big/g1", "/c/small", "/d/x"])
+    }
+
+    @Test func deleteWholeParentPassesOnlyParent() async {
+        let remover = FakeRemover()
+        let m = model(remover: remover, lister: lister)
+        await m.scan()
+        await m.expand(node(m, "/c/big"))
+        m.setCategoryChecked(m.rows[1], false)
+        m.setChecked(id: "/c/small", false)
+        await m.delete()
+        let sent = remover.received.withLock { $0 }
+        #expect(sent.count == 1)
+        #expect(sent[0].map(\.id) == ["/c/big"])
+        #expect(!m.rows[0].findings.contains { $0.id == "/c/big" })
+        #expect(m.children(of: "/c/big").isEmpty)
+    }
+
+    @Test func deleteMixedParentPassesOnlyCheckedChildren() async {
+        let remover = FakeRemover()
+        let m = model(remover: remover, lister: lister)
+        await m.scan()
+        await m.expand(node(m, "/c/big"))
+        await m.expand(m.children(of: "/c/big")[0])
+        m.setCategoryChecked(m.rows[1], false)
+        m.setChecked(id: "/c/small", false)
+        m.setChecked(id: "/c/big/g2", false)
+        m.setChecked(id: "/c/big/g1/y", false)
+        await m.delete()
+        let sent = remover.received.withLock { $0 }
+        #expect(sent.count == 1)
+        #expect(sent[0].map(\.id) == ["/c/big/g1/x"])
+        // parent stays, shrunk by what was removed
+        let big = m.rows[0].findings.first { $0.id == "/c/big" }
+        #expect(big?.size == 65)
+        #expect(m.children(of: "/c/big/g1").map(\.id) == ["/c/big/g1/y"])
+        #expect(m.children(of: "/c/big").first { $0.id == "/c/big/g1" }?.size == 25)
     }
 }

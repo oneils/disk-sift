@@ -11,7 +11,9 @@ struct JunkView: View {
                 ForEach(model.rows) { row in
                     DisclosureGroup(isExpanded: expandedBinding(row.id)) {
                         ForEach(row.findings) { finding in
-                            JunkItemRow(model: model, finding: finding)
+                            JunkItemRow(
+                                model: model, node: model.node(for: finding, categoryID: row.id),
+                                requiresRoot: finding.requiresRoot)
                         }
                     } label: {
                         HStack {
@@ -90,21 +92,61 @@ struct JunkView: View {
 
 private struct JunkItemRow: View {
     @Bindable var model: JunkModel
-    let finding: Finding
+    let node: JunkModel.Node
+    var requiresRoot = false
 
     var body: some View {
-        HStack {
-            Toggle(
-                isOn: Binding(
-                    get: { model.isChecked(finding) }, set: { model.setChecked(finding, $0) })
+        if model.canExpand(node, requiresRoot: requiresRoot) {
+            DisclosureGroup(
+                isExpanded: Binding(
+                    get: { model.isExpanded(node.id) }, set: { model.setExpanded(node, $0) })
             ) {
-                Text(finding.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
+                ForEach(model.children(of: node.id)) { child in
+                    JunkItemRow(model: model, node: child)
+                }
+            } label: {
+                line
             }
-            .disabled(finding.requiresRoot)
-            Spacer()
-            if finding.requiresRoot { Text("Needs admin").foregroundStyle(.secondary) }
-            Text(finding.size.map(formatBytes) ?? "—").monospacedDigit().foregroundStyle(.secondary)
+        } else {
+            line
         }
-        .opacity(finding.requiresRoot ? 0.5 : 1)
+    }
+
+    private var line: some View {
+        HStack {
+            CheckBox(state: model.state(of: node.id)) { on in model.setChecked(id: node.id, on) }
+                .disabled(requiresRoot)
+            Text(node.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
+            Spacer()
+            if model.isLoading(node.id) { ProgressView().controlSize(.small) }
+            if requiresRoot { Text("Needs admin").foregroundStyle(.secondary) }
+            Text(node.depth == 0 && node.size == 0 && !requiresRoot ? "—" : formatBytes(node.size))
+                .monospacedDigit().foregroundStyle(.secondary)
+        }
+        .opacity(requiresRoot ? 0.5 : 1)
+        .help(node.url.path)
+    }
+}
+
+/// Tri-state checkbox; a click on a mixed box checks everything.
+private struct CheckBox: View {
+    let state: JunkModel.CheckState
+    let set: (Bool) -> Void
+
+    var body: some View {
+        Button {
+            set(state != .on)
+        } label: {
+            Image(systemName: symbol).foregroundStyle(state == .off ? Color.secondary : Color.accentColor)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var symbol: String {
+        switch state {
+        case .on: "checkmark.square.fill"
+        case .mixed: "minus.square.fill"
+        case .off: "square"
+        }
     }
 }
