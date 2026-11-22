@@ -6,6 +6,7 @@ enum Section: String, CaseIterable, Identifiable {
     case uninstall = "Uninstall"
     case junk = "Junk"
     case largeFiles = "Large Files"
+    case spaceLens = "Space Lens"
     case plugins = "Plugins"
 
     var id: String { rawValue }
@@ -14,6 +15,7 @@ enum Section: String, CaseIterable, Identifiable {
         case .uninstall: "trash"
         case .junk: "sparkles"
         case .largeFiles: "doc.text.magnifyingglass"
+        case .spaceLens: "chart.bar.doc.horizontal"
         case .plugins: "pianokeys"
         }
     }
@@ -31,11 +33,13 @@ final class ShellModel {
     let largeFiles: LargeFilesModel
     let orphans: OrphansModel
     let plugins: PluginsModel
+    let spaceLens: SpaceLensModel
 
     init(
         uninstall: UninstallModel = .live(), junk: JunkModel = .live(), largeFiles: LargeFilesModel = .live(),
-        orphans: OrphansModel = .live(), plugins: PluginsModel = .live()
+        orphans: OrphansModel = .live(), plugins: PluginsModel = .live(), spaceLens: SpaceLensModel = .live()
     ) {
+        self.spaceLens = spaceLens
         self.plugins = plugins
         self.uninstall = uninstall
         self.junk = junk
@@ -71,6 +75,8 @@ struct ContentView: View {
                     JunkView(model: model.junk)
                 case .largeFiles:
                     LargeFilesView(model: model.largeFiles)
+                case .spaceLens:
+                    SpaceLensView(model: model.spaceLens)
                 case .plugins:
                     PluginsView(model: model.plugins)
                 }

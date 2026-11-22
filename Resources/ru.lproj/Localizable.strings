@@ -246,3 +246,16 @@
 "Leftovers: %@" = "Остатки: %@";
 "Needs an administrator password; deleted permanently." = "Нужен пароль администратора; удаляется навсегда.";
 "Contains your own presets (User folder); not selected with the plugin." = "Содержит ваши пресеты (папка User); не выбирается вместе с плагином.";
+"Space Lens" = "Space Lens";
+"Items moved to Trash" = "Объекты перемещены в Корзину";
+"Some items moved to Trash" = "Часть объектов перемещена в Корзину";
+"Moving items to Trash stopped" = "Перемещение в Корзину остановлено";
+"Items were not moved to Trash" = "Объекты не перемещены в Корзину";
+"See where space goes" = "Посмотрите, куда уходит место";
+"Space Lens measures every folder in your home folder, including Library, and lets you drill down to what takes the space. Files and folders outside Library, apps and Git repositories can be moved to the Trash. A large home folder can take several minutes to scan." = "Space Lens измеряет каждую папку в домашней папке, включая Library, и позволяет спуститься до того, что занимает место. Файлы и папки вне Library, приложений и Git-репозиториев можно переместить в Корзину. Сканирование большой домашней папки может занять несколько минут.";
+"Measuring your home folder…" = "Измерение домашней папки…";
+"%lld items, %@" = "%lld объектов, %@";
+"Enclosing folder" = "Папка выше";
+"Some folders could not be read (Full Disk Access may be needed); sizes are partial." = "Некоторые папки не удалось прочитать (может понадобиться полный доступ к диску); размеры неполные.";
+"This folder is empty." = "Папка пуста.";
+"Smaller files: %lld" = "Мелкие файлы: %lld";

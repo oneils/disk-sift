@@ -246,3 +246,16 @@
 "Leftovers: %@" = "Leftovers: %@";
 "Needs an administrator password; deleted permanently." = "Needs an administrator password; deleted permanently.";
 "Contains your own presets (User folder); not selected with the plugin." = "Contains your own presets (User folder); not selected with the plugin.";
+"Space Lens" = "Space Lens";
+"Items moved to Trash" = "Items moved to Trash";
+"Some items moved to Trash" = "Some items moved to Trash";
+"Moving items to Trash stopped" = "Moving items to Trash stopped";
+"Items were not moved to Trash" = "Items were not moved to Trash";
+"See where space goes" = "See where space goes";
+"Space Lens measures every folder in your home folder, including Library, and lets you drill down to what takes the space. Files and folders outside Library, apps and Git repositories can be moved to the Trash. A large home folder can take several minutes to scan." = "Space Lens measures every folder in your home folder, including Library, and lets you drill down to what takes the space. Files and folders outside Library, apps and Git repositories can be moved to the Trash. A large home folder can take several minutes to scan.";
+"Measuring your home folder…" = "Measuring your home folder…";
+"%lld items, %@" = "%lld items, %@";
+"Enclosing folder" = "Enclosing folder";
+"Some folders could not be read (Full Disk Access may be needed); sizes are partial." = "Some folders could not be read (Full Disk Access may be needed); sizes are partial.";
+"This folder is empty." = "This folder is empty.";
+"Smaller files: %lld" = "Smaller files: %lld";

@@ -3,14 +3,15 @@ import Foundation
 /// The only places DiskSift may remove things from. Built from the same constants the scanners use,
 /// so scanners and the remover cannot drift apart.
 ///
-/// Two scopes exist: `.library` (uninstall and junk: inside the scanned Library folders, the
-/// Applications folders and dev cache parents) and `.largeFiles` (the home folder minus a deny list,
-/// regular files only, Trash only). The rules of a scope travel with it, so a `Remover` built on it
-/// enforces them without extra arguments.
+/// Three scopes exist: `.library` (uninstall and junk: inside the scanned Library folders, the
+/// Applications folders and dev cache parents), `.largeFiles` (the home folder minus a deny list,
+/// regular files only, Trash only) and `.spaceLens` (the same deny list, files and folders, Trash only).
+/// The rules of a scope travel with it, so a `Remover` built on it enforces them without extra arguments.
 public struct RemovalRoots: Sendable {
     public enum Kind: Sendable, Equatable {
         case library
         case largeFiles(LargeFilesScope)
+        case spaceLens(LargeFilesScope)
     }
 
     public let roots: [CanonicalPath]
@@ -21,18 +22,30 @@ public struct RemovalRoots: Sendable {
         kind = .library
     }
 
-    private init(largeFiles scope: LargeFilesScope) {
-        roots = [scope.home]
-        kind = .largeFiles(scope)
+    private init(home: CanonicalPath, kind: Kind) {
+        roots = [home]
+        self.kind = kind
     }
 
     /// Strictly inside the home folder, outside the large-files deny list, on the home volume.
     public static func largeFiles(_ paths: SiftPaths) -> RemovalRoots {
-        RemovalRoots(largeFiles: LargeFilesScope(paths: paths))
+        let scope = LargeFilesScope(paths: paths)
+        return RemovalRoots(home: scope.home, kind: .largeFiles(scope))
+    }
+
+    /// Space Lens: the large-files deny list, but whole folders may go to the Trash too
+    /// (`node_modules`, old projects). Never `~/Library`, `~/.Trash`, `~/Applications`, inside a package
+    /// or `.git`, or another volume.
+    public static func spaceLens(_ paths: SiftPaths) -> RemovalRoots {
+        let scope = LargeFilesScope(paths: paths)
+        return RemovalRoots(home: scope.home, kind: .spaceLens(scope))
     }
 
     /// Only regular files may be removed (no directories, no symlinks).
-    public var filesOnly: Bool { kind != .library }
+    public var filesOnly: Bool {
+        if case .largeFiles = kind { return true }
+        return false
+    }
 
     /// Items may only be moved to the Trash, never deleted permanently.
     public var trashOnly: Bool { kind != .library }
@@ -54,7 +67,10 @@ public struct RemovalRoots: Sendable {
     /// Canonical path of `url` when it is strictly inside a root and is not a root itself
     /// (`~/Library/Caches` is never removable, even though `Preferences/ByHost` sits inside `Preferences`).
     public func allows(_ path: CanonicalPath) -> Bool {
-        if case .largeFiles(let scope) = kind { return !scope.isDenied(path) }
+        switch kind {
+        case .largeFiles(let scope), .spaceLens(let scope): return !scope.isDenied(path)
+        case .library: break
+        }
         let lower = path.path.lowercased()
         if roots.contains(where: { $0.path.lowercased() == lower }) { return false }
         return roots.contains { path.isStrictlyInside($0) }
