@@ -111,8 +111,9 @@ struct EmptyStateView<Actions: View>: View {
             Text(message)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
+                // no vertical fixedSize: while the window measures its minimum size it proposes ~0 width,
+                // the text then wraps per character and its height would push the sidebar out of view
                 .frame(maxWidth: 440)
-                .fixedSize(horizontal: false, vertical: true)
             actions.padding(.top, 4)
         }
         .padding(32)
